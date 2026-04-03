@@ -85,7 +85,6 @@ export function TrendsCharts({ dailyData, hourlyData }: TrendsChartsProps) {
 }
 
 function MeetingPipeline() {
-  const { dummyMeetings } = require("@/data/dummyData");
   return (
     <div className="space-y-4">
       {dummyMeetings.map((m: any) => (
