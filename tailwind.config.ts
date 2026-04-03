@@ -57,6 +57,20 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        stat: {
+          blue: "hsl(var(--stat-blue))",
+          green: "hsl(var(--stat-green))",
+          teal: "hsl(var(--stat-teal))",
+          orange: "hsl(var(--stat-orange))",
+          purple: "hsl(var(--stat-purple))",
+        },
+        chart: {
+          "1": "hsl(var(--chart-1))",
+          "2": "hsl(var(--chart-2))",
+          "3": "hsl(var(--chart-3))",
+          "4": "hsl(var(--chart-4))",
+          "5": "hsl(var(--chart-5))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
