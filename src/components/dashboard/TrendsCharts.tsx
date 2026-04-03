@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, CartesianGrid, Cell } from "recharts";
 import { dummyMeetings } from "@/data/dummyData";
 
 interface DailyData {
@@ -32,6 +32,12 @@ const gridStyle = { strokeDasharray: "3 3", stroke: "hsl(var(--border))" };
 
 export function TrendsCharts({ dailyData, hourlyData }: TrendsChartsProps) {
   const last14 = dailyData.slice(-14);
+
+  // Success rate trend (answered / calls per day)
+  const successTrend = last14.map(d => ({
+    date: d.date,
+    rate: d.calls > 0 ? Math.round((d.answered / d.calls) * 100) : 0,
+  }));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -86,20 +92,26 @@ export function TrendsCharts({ dailyData, hourlyData }: TrendsChartsProps) {
         </ResponsiveContainer>
       </Card>
 
-      {/* Best Calling Hours */}
+      {/* Success Rate Trend */}
       <Card className="p-5 glass-card">
         <div className="mb-4">
-          <p className="font-semibold text-foreground">Best Calling Hours</p>
-          <p className="text-xs text-muted-foreground">Answered calls by hour</p>
+          <p className="font-semibold text-foreground">Success Rate Trend</p>
+          <p className="text-xs text-muted-foreground">Daily answer rate %</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={hourlyData} barSize={20}>
+          <AreaChart data={successTrend}>
+            <defs>
+              <linearGradient id="successGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--stat-green))" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="hsl(var(--stat-green))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <CartesianGrid {...gridStyle} />
-            <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="answered" name="Answered" fill="hsl(var(--chart-3))" radius={[6, 6, 0, 0]} />
-          </BarChart>
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value}%`, "Success Rate"]} />
+            <Area type="monotone" dataKey="rate" name="Success Rate" stroke="hsl(var(--stat-green))" strokeWidth={2} fill="url(#successGrad)" />
+          </AreaChart>
         </ResponsiveContainer>
       </Card>
 

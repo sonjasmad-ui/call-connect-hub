@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Save } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arraySwap } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ViewSidebar } from "@/components/dashboard/ViewSidebar";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { OverviewCards } from "@/components/dashboard/OverviewCards";
@@ -11,7 +13,6 @@ import { TrendsCharts } from "@/components/dashboard/TrendsCharts";
 import { CallRecordingsTable } from "@/components/dashboard/CallRecordingsTable";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
-import { GamificationBar } from "@/components/dashboard/GamificationBar";
 import { BookingsDialog } from "@/components/dashboard/BookingsDialog";
 import {
   dummyCalls,
@@ -25,7 +26,7 @@ import {
   type SavedView,
 } from "@/data/dummyData";
 
-const defaultWidgetOrder = ["overview", "gamification", "targets", "trends", "calls"];
+const defaultWidgetOrder = ["overview", "targets", "trends", "calls"];
 
 export default function Index() {
   const [views, setViews] = useState<SavedView[]>(defaultSavedViews);
@@ -35,6 +36,8 @@ export default function Index() {
   const [callTarget, setCallTarget] = useState(3000);
   const [widgetOrder, setWidgetOrder] = useState(defaultWidgetOrder);
   const [showBookings, setShowBookings] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const [lastUpdated] = useState(new Date().toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }));
 
   const filteredCalls = useMemo(() => filterCalls(dummyCalls, filters), [filters]);
@@ -61,11 +64,14 @@ export default function Index() {
     setFilters(view.filters);
   }, []);
 
-  const handleSaveView = useCallback((name: string, f: DashboardFilters) => {
-    const newView: SavedView = { id: `v${Date.now()}`, name, filters: { ...f } };
+  const handleSaveView = useCallback((name: string) => {
+    if (!name.trim()) return;
+    const newView: SavedView = { id: `v${Date.now()}`, name: name.trim(), filters: { ...filters } };
     setViews(prev => [...prev, newView]);
     setActiveViewId(newView.id);
-  }, []);
+    setSaveName("");
+    setSaveOpen(false);
+  }, [filters]);
 
   const handleDeleteView = useCallback((id: string) => {
     setViews(prev => prev.filter(v => v.id !== id));
@@ -75,7 +81,6 @@ export default function Index() {
 
   const widgetMap: Record<string, React.ReactNode> = {
     overview: <OverviewCards {...overview} bookings={bookings} onBookingsClick={() => setShowBookings(true)} />,
-    gamification: <GamificationBar totalCalls={overview.totalCalls} answered={overview.answered} bookings={bookings} successRate={overview.successRate} />,
     targets: (
       <BudgetTargets
         bookings={bookings}
@@ -97,9 +102,7 @@ export default function Index() {
         views={views}
         activeViewId={activeViewId}
         onSelectView={handleSelectView}
-        onSaveView={handleSaveView}
         onDeleteView={handleDeleteView}
-        currentFilters={filters}
       />
 
       <main className="flex-1 p-6 overflow-auto">
@@ -108,6 +111,23 @@ export default function Index() {
             <h1 className="text-2xl font-bold text-foreground">Sales Dashboard</h1>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground bg-muted rounded-full px-3 py-1.5">Updated {lastUpdated}</span>
+              <Popover open={saveOpen} onOpenChange={setSaveOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5"><Save className="h-3.5 w-3.5" /> Save View</Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="end">
+                  <p className="text-sm font-medium text-foreground mb-2">Save current filters as a view</p>
+                  <Input
+                    placeholder="View name..."
+                    value={saveName}
+                    onChange={e => setSaveName(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleSaveView(saveName)}
+                    autoFocus
+                    className="text-sm mb-2"
+                  />
+                  <Button size="sm" className="w-full" onClick={() => handleSaveView(saveName)} disabled={!saveName.trim()}>Save</Button>
+                </PopoverContent>
+              </Popover>
               <Button variant="outline" size="sm" className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Refresh</Button>
             </div>
           </div>
