@@ -56,6 +56,7 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+          muted: "hsl(var(--sidebar-muted))",
         },
         stat: {
           blue: "hsl(var(--stat-blue))",
@@ -63,6 +64,7 @@ export default {
           teal: "hsl(var(--stat-teal))",
           orange: "hsl(var(--stat-orange))",
           purple: "hsl(var(--stat-purple))",
+          rose: "hsl(var(--stat-rose))",
         },
         chart: {
           "1": "hsl(var(--chart-1))",
