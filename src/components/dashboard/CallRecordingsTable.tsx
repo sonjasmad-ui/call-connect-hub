@@ -1,115 +1,145 @@
 import { useState } from "react";
-import { Play, Phone, PhoneOff, PhoneMissed } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Search, Play, ChevronDown, ChevronUp, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import type { CallRecord } from "@/data/dummyData";
 
 interface CallRecordingsTableProps {
   calls: CallRecord[];
 }
 
-const statusConfig = {
-  answered: { icon: Phone, variant: "default" as const, label: "Answered" },
-  missed: { icon: PhoneMissed, variant: "destructive" as const, label: "Missed" },
-  busy: { icon: PhoneOff, variant: "secondary" as const, label: "Busy" },
-  voicemail: { icon: Phone, variant: "outline" as const, label: "Voicemail" },
-};
-
-function formatDuration(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
 export function CallRecordingsTable({ calls }: CallRecordingsTableProps) {
+  const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<"date" | "duration">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
-  const recentCalls = calls.slice(-50).reverse();
+
+  const filtered = calls
+    .filter(c => c.phone.includes(search) || c.notes?.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const mul = sortDir === "asc" ? 1 : -1;
+      if (sortField === "date") return mul * (`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+      return mul * (a.duration - b.duration);
+    })
+    .slice(0, 50);
+
+  const toggleSort = (field: "date" | "duration") => {
+    if (sortField === field) setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(field); setSortDir("desc"); }
+  };
+
+  const SortIcon = ({ field }: { field: "date" | "duration" }) =>
+    sortField === field ? (sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : null;
+
+  const statusVariant = (s: string) => {
+    switch (s) {
+      case "answered": return "default";
+      case "missed": return "destructive";
+      default: return "secondary";
+    }
+  };
+
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
 
   return (
-    <div>
-      <p className="text-xs font-semibold tracking-wider text-muted-foreground mb-3">RECENT CALLS</p>
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Time</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Contact</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Company</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Duration</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Direction</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Recording</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentCalls.map(call => {
-                const cfg = statusConfig[call.status];
-                return (
-                  <tr
-                    key={call.id}
-                    className="border-b border-border last:border-0 hover:bg-accent/50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedCall(call)}
-                  >
-                    <td className="p-3 text-foreground">{call.date}</td>
-                    <td className="p-3 text-foreground">{call.time}</td>
-                    <td className="p-3 text-foreground font-medium">{call.contactName}</td>
-                    <td className="p-3 text-muted-foreground">{call.company}</td>
-                    <td className="p-3"><Badge variant={cfg.variant}>{cfg.label}</Badge></td>
-                    <td className="p-3 text-foreground">{formatDuration(call.duration)}</td>
-                    <td className="p-3 text-muted-foreground capitalize">{call.direction}</td>
-                    <td className="p-3">
-                      {call.recordingUrl && (
-                        <Button size="icon" variant="ghost" onClick={e => { e.stopPropagation(); setSelectedCall(call); }}>
-                          <Play className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+    <Card className="glass-card overflow-hidden">
+      <div className="p-5 border-b border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="font-semibold text-foreground">Recent Calls</p>
+            <p className="text-xs text-muted-foreground">Click a row for details · Phone numbers from Telavox</p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by phone or notes..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 text-sm bg-background"
+            />
+          </div>
         </div>
-      </Card>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer select-none" onClick={() => toggleSort("date")}>
+                <span className="flex items-center gap-1">Date / Time <SortIcon field="date" /></span>
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Direction</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Phone</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer select-none" onClick={() => toggleSort("duration")}>
+                <span className="flex items-center gap-1">Duration <SortIcon field="duration" /></span>
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Recording</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(call => (
+              <tr key={call.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => setSelectedCall(call)}>
+                <td className="px-4 py-3 whitespace-nowrap text-foreground">{call.date} {call.time}</td>
+                <td className="px-4 py-3">
+                  {call.direction === "outbound"
+                    ? <span className="flex items-center gap-1 text-[hsl(var(--stat-blue))]"><PhoneOutgoing className="h-3.5 w-3.5" /> Out</span>
+                    : <span className="flex items-center gap-1 text-[hsl(var(--stat-green))]"><PhoneIncoming className="h-3.5 w-3.5" /> In</span>
+                  }
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-foreground">{call.phone}</td>
+                <td className="px-4 py-3"><Badge variant={statusVariant(call.status)} className="text-xs capitalize">{call.status}</Badge></td>
+                <td className="px-4 py-3 text-foreground">{formatDuration(call.duration)}</td>
+                <td className="px-4 py-3">
+                  {call.recordingUrl && (
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={e => e.stopPropagation()}>
+                      <Play className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Call Details</DialogTitle>
           </DialogHeader>
           {selectedCall && (
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div><p className="text-muted-foreground">Contact</p><p className="font-medium text-foreground">{selectedCall.contactName}</p></div>
-                <div><p className="text-muted-foreground">Company</p><p className="font-medium text-foreground">{selectedCall.company}</p></div>
-                <div><p className="text-muted-foreground">Phone</p><p className="font-medium text-foreground">{selectedCall.phone}</p></div>
-                <div><p className="text-muted-foreground">Duration</p><p className="font-medium text-foreground">{formatDuration(selectedCall.duration)}</p></div>
-                <div><p className="text-muted-foreground">Status</p><Badge variant={statusConfig[selectedCall.status].variant}>{statusConfig[selectedCall.status].label}</Badge></div>
-                <div><p className="text-muted-foreground">Direction</p><p className="font-medium text-foreground capitalize">{selectedCall.direction}</p></div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Date</span><p className="font-medium text-foreground">{selectedCall.date} {selectedCall.time}</p></div>
+                <div><span className="text-muted-foreground">Direction</span><p className="font-medium text-foreground capitalize">{selectedCall.direction}</p></div>
+                <div><span className="text-muted-foreground">Phone</span><p className="font-medium text-foreground font-mono">{selectedCall.phone}</p></div>
+                <div><span className="text-muted-foreground">Status</span><p><Badge variant={statusVariant(selectedCall.status)} className="capitalize">{selectedCall.status}</Badge></p></div>
+                <div><span className="text-muted-foreground">Duration</span><p className="font-medium text-foreground">{formatDuration(selectedCall.duration)}</p></div>
               </div>
-              {selectedCall.recordingUrl && (
-                <div className="pt-3 border-t border-border">
-                  <p className="text-muted-foreground mb-2">Recording</p>
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <Play className="h-8 w-8 mx-auto text-primary mb-2" />
-                    <p className="text-xs text-muted-foreground">Recording playback will be available when connected to Telavox</p>
-                  </div>
+              {selectedCall.notes && (
+                <div className="text-sm p-3 rounded-lg bg-muted/50">
+                  <span className="text-muted-foreground">Notes:</span>
+                  <p className="text-foreground mt-1">{selectedCall.notes}</p>
                 </div>
               )}
-              {selectedCall.notes && (
-                <div className="pt-3 border-t border-border">
-                  <p className="text-muted-foreground mb-1">Notes</p>
-                  <p className="text-foreground">{selectedCall.notes}</p>
+              {selectedCall.recordingUrl && (
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground mb-2">Recording will play from Telavox when connected</p>
+                  <Button size="sm" variant="outline"><Play className="h-4 w-4 mr-1" /> Play recording</Button>
                 </div>
               )}
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }

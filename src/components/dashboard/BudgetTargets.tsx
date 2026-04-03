@@ -1,5 +1,9 @@
+import { useState } from "react";
+import { Target, Phone, Pencil, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface BudgetTargetsProps {
   bookings: number;
@@ -7,111 +11,96 @@ interface BudgetTargetsProps {
   daysLeft: number;
   totalCalls: number;
   callTarget: number;
-  costPerBooking: number;
-  monthlyBudget: number;
+  onBookingTargetChange?: (target: number) => void;
+  onCallTargetChange?: (target: number) => void;
 }
 
-export function BudgetTargets({
-  bookings,
-  bookingTarget,
-  daysLeft,
-  totalCalls,
-  callTarget,
-  costPerBooking,
-  monthlyBudget,
-}: BudgetTargetsProps) {
-  const remaining = bookingTarget - bookings;
-  const requiredPerDay = daysLeft > 0 ? Math.ceil(remaining / daysLeft) : 0;
-  const projectedBookings = daysLeft > 0 ? Math.round(bookings + (bookings / (30 - daysLeft)) * daysLeft) : bookings;
-  const callsRemaining = callTarget - totalCalls;
-  const callsPerDay = daysLeft > 0 ? Math.ceil(callsRemaining / daysLeft) : 0;
-  const expectedRevenue = bookings * 4546 + Math.round(Math.random() * 1000);
-  const roi = monthlyBudget > 0 ? (expectedRevenue / monthlyBudget).toFixed(1) : "0";
+export function BudgetTargets({ bookings, bookingTarget, daysLeft, totalCalls, callTarget, onBookingTargetChange, onCallTargetChange }: BudgetTargetsProps) {
+  const [editingBooking, setEditingBooking] = useState(false);
+  const [editingCalls, setEditingCalls] = useState(false);
+  const [bookingInput, setBookingInput] = useState(String(bookingTarget));
+  const [callInput, setCallInput] = useState(String(callTarget));
+
+  const bookingPct = Math.min(100, Math.round((bookings / bookingTarget) * 100));
+  const callPct = Math.min(100, Math.round((totalCalls / callTarget) * 100));
+  const bookingsNeeded = Math.max(0, bookingTarget - bookings);
+  const perDay = daysLeft > 0 ? Math.ceil(bookingsNeeded / daysLeft) : 0;
+
+  const saveBookingTarget = () => {
+    const v = parseInt(bookingInput);
+    if (v > 0) onBookingTargetChange?.(v);
+    setEditingBooking(false);
+  };
+  const saveCallTarget = () => {
+    const v = parseInt(callInput);
+    if (v > 0) onCallTargetChange?.(v);
+    setEditingCalls(false);
+  };
 
   return (
-    <div>
-      <p className="text-xs font-semibold tracking-wider text-muted-foreground mb-3">BUDGET & TARGETS</p>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <div className="flex justify-between items-start mb-4">
-            <p className="font-semibold text-foreground">Monthly booking target</p>
-            <span className="text-sm text-muted-foreground">{daysLeft} days left</span>
-          </div>
-          <p className="text-3xl font-bold text-foreground">{bookings} / {bookingTarget}</p>
-          <p className="text-sm text-muted-foreground mb-3">{remaining} remaining this month</p>
-          <Progress value={(bookings / bookingTarget) * 100} className="h-2 mb-4" />
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Required per day</span>
-              <span className="font-semibold text-foreground">{requiredPerDay}</span>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <Card className="p-5 glass-card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[hsl(var(--stat-green))] to-[hsl(var(--stat-teal))] flex items-center justify-center">
+              <Target className="h-4 w-4 text-primary-foreground" />
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Projected bookings</span>
-              <span className="font-semibold text-foreground">{projectedBookings}</span>
+            <div>
+              <p className="font-semibold text-foreground">Booking Target</p>
+              <p className="text-xs text-muted-foreground">{daysLeft} days left this month</p>
             </div>
           </div>
-        </Card>
+          {editingBooking ? (
+            <div className="flex items-center gap-1.5">
+              <Input value={bookingInput} onChange={e => setBookingInput(e.target.value)} className="w-20 h-8 text-sm" />
+              <Button size="sm" variant="ghost" onClick={saveBookingTarget}><Check className="h-3.5 w-3.5" /></Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => { setBookingInput(String(bookingTarget)); setEditingBooking(true); }}>
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit target
+            </Button>
+          )}
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{bookings} / {bookingTarget} bookings</span>
+            <span className="font-semibold text-foreground">{bookingPct}%</span>
+          </div>
+          <Progress value={bookingPct} className="h-2.5 bg-muted" />
+          <p className="text-xs text-muted-foreground">Need {perDay} bookings/day to hit target</p>
+        </div>
+      </Card>
 
-        <Card className="p-5">
-          <div className="flex justify-between items-start mb-4">
-            <p className="font-semibold text-foreground">Call budget</p>
-            <span className="text-sm text-muted-foreground">Monthly target</span>
-          </div>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium text-foreground">Calls made this month</p>
-                <p className="text-muted-foreground">{callTarget.toLocaleString()} monthly target</p>
-              </div>
-              <span className="text-xl font-bold text-foreground">{totalCalls.toLocaleString()}</span>
+      <Card className="p-5 glass-card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[hsl(var(--stat-blue))] to-[hsl(var(--stat-purple))] flex items-center justify-center">
+              <Phone className="h-4 w-4 text-primary-foreground" />
             </div>
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium text-foreground">Calls remaining</p>
-                <p className="text-muted-foreground">Until monthly target</p>
-              </div>
-              <span className="text-xl font-bold text-foreground">{callsRemaining.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium text-foreground">Required per day</p>
-                <p className="text-muted-foreground">To hit call target</p>
-              </div>
-              <span className="text-xl font-bold text-foreground">{callsPerDay}</span>
+            <div>
+              <p className="font-semibold text-foreground">Call Target</p>
+              <p className="text-xs text-muted-foreground">Monthly call volume</p>
             </div>
           </div>
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex justify-between items-start mb-4">
-            <p className="font-semibold text-foreground">Economics</p>
-            <span className="text-sm text-muted-foreground">Budget layer</span>
+          {editingCalls ? (
+            <div className="flex items-center gap-1.5">
+              <Input value={callInput} onChange={e => setCallInput(e.target.value)} className="w-20 h-8 text-sm" />
+              <Button size="sm" variant="ghost" onClick={saveCallTarget}><Check className="h-3.5 w-3.5" /></Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => { setCallInput(String(callTarget)); setEditingCalls(true); }}>
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit target
+            </Button>
+          )}
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{totalCalls.toLocaleString()} / {callTarget.toLocaleString()} calls</span>
+            <span className="font-semibold text-foreground">{callPct}%</span>
           </div>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium text-foreground">Expected revenue</p>
-                <p className="text-muted-foreground">Based on booked meetings</p>
-              </div>
-              <span className="text-xl font-bold text-foreground">DKK {expectedRevenue.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium text-foreground">Cost per booking</p>
-                <p className="text-muted-foreground">Using monthly cost budget</p>
-              </div>
-              <span className="text-xl font-bold text-foreground">DKK {costPerBooking.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <div>
-                <p className="font-medium text-foreground">Estimated ROI</p>
-                <p className="text-muted-foreground">Expected revenue ÷ cost budget</p>
-              </div>
-              <span className="text-xl font-bold text-foreground">{roi}x</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+          <Progress value={callPct} className="h-2.5 bg-muted" />
+        </div>
+      </Card>
     </div>
   );
 }
