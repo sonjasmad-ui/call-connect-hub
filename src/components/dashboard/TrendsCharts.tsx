@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-
+import { dummyMeetings } from "@/data/dummyData";
 interface DailyData {
   date: string;
   calls: number;
