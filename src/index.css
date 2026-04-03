@@ -2,64 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    --background: 225 25% 97%;
+    --foreground: 224 30% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 224 30% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 224 30% 14%;
 
-    --primary: 228 66% 47%;
+    --primary: 234 85% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 225 20% 94%;
+    --secondary-foreground: 224 30% 14%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 225 16% 93%;
+    --muted-foreground: 224 10% 48%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 234 85% 65%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 228 66% 47%;
+    --border: 225 15% 90%;
+    --input: 225 15% 90%;
+    --ring: 234 85% 65%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 228 66% 47%;
+    --sidebar-background: 230 25% 12%;
+    --sidebar-foreground: 225 15% 85%;
+    --sidebar-primary: 234 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 228 66% 47%;
+    --sidebar-accent: 230 20% 18%;
+    --sidebar-accent-foreground: 225 15% 90%;
+    --sidebar-border: 230 20% 20%;
+    --sidebar-ring: 234 85% 65%;
+    --sidebar-muted: 230 15% 40%;
 
-    /* Dashboard-specific tokens */
-    --stat-blue: 228 66% 47%;
-    --stat-green: 152 60% 42%;
-    --stat-teal: 186 55% 42%;
+    --stat-blue: 234 85% 65%;
+    --stat-green: 152 68% 46%;
+    --stat-teal: 186 60% 45%;
     --stat-orange: 25 95% 53%;
-    --stat-purple: 262 52% 47%;
-    --demo-banner: 142 76% 36%;
+    --stat-purple: 265 60% 60%;
+    --stat-rose: 350 80% 60%;
 
-    --chart-1: 228 66% 47%;
-    --chart-2: 152 60% 42%;
+    --chart-1: 234 85% 65%;
+    --chart-2: 152 68% 46%;
     --chart-3: 25 95% 53%;
-    --chart-4: 262 52% 47%;
-    --chart-5: 186 55% 42%;
+    --chart-4: 265 60% 60%;
+    --chart-5: 186 60% 45%;
+
+    --gradient-start: 234 85% 65%;
+    --gradient-end: 265 60% 60%;
+
+    --success: 152 68% 46%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
   }
 }
 
@@ -67,8 +71,21 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm;
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+  }
+  .gradient-bar {
+    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
   }
 }
