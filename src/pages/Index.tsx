@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, arraySwap } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { ViewSidebar } from "@/components/dashboard/ViewSidebar";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -7,6 +9,7 @@ import { OverviewCards } from "@/components/dashboard/OverviewCards";
 import { BudgetTargets } from "@/components/dashboard/BudgetTargets";
 import { TrendsCharts } from "@/components/dashboard/TrendsCharts";
 import { CallRecordingsTable } from "@/components/dashboard/CallRecordingsTable";
+import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import {
   dummyCalls,
   defaultFilters,
@@ -19,10 +22,15 @@ import {
   type SavedView,
 } from "@/data/dummyData";
 
+const defaultWidgetOrder = ["overview", "targets", "trends", "calls"];
+
 export default function Index() {
   const [views, setViews] = useState<SavedView[]>(defaultSavedViews);
   const [activeViewId, setActiveViewId] = useState("v1");
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
+  const [bookingTarget, setBookingTarget] = useState(30);
+  const [callTarget, setCallTarget] = useState(3000);
+  const [widgetOrder, setWidgetOrder] = useState(defaultWidgetOrder);
   const [lastUpdated] = useState(new Date().toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }));
 
   const filteredCalls = useMemo(() => filterCalls(dummyCalls, filters), [filters]);
@@ -30,6 +38,19 @@ export default function Index() {
   const dailyData = useMemo(() => getDailyData(filteredCalls), [filteredCalls]);
   const hourlyData = useMemo(() => getHourlyData(filteredCalls), [filteredCalls]);
   const bookings = 15;
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor));
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setWidgetOrder(prev => {
+        const oldIdx = prev.indexOf(String(active.id));
+        const newIdx = prev.indexOf(String(over.id));
+        return arraySwap(prev, oldIdx, newIdx);
+      });
+    }
+  }, []);
 
   const handleSelectView = useCallback((view: SavedView) => {
     setActiveViewId(view.id);
@@ -48,6 +69,23 @@ export default function Index() {
     setFilters(defaultFilters);
   }, []);
 
+  const widgetMap: Record<string, React.ReactNode> = {
+    overview: <OverviewCards {...overview} />,
+    targets: (
+      <BudgetTargets
+        bookings={bookings}
+        bookingTarget={bookingTarget}
+        daysLeft={12}
+        totalCalls={overview.totalCalls}
+        callTarget={callTarget}
+        onBookingTargetChange={setBookingTarget}
+        onCallTargetChange={setCallTarget}
+      />
+    ),
+    trends: <TrendsCharts dailyData={dailyData} hourlyData={hourlyData} />,
+    calls: <CallRecordingsTable calls={filteredCalls} />,
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
       <ViewSidebar
@@ -61,39 +99,33 @@ export default function Index() {
 
       <main className="flex-1 p-6 overflow-auto">
         <div className="max-w-[1400px] mx-auto space-y-6">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Sales Analytics Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Adversus-style workspace for Telavox + Pipedrive performance, goals, and recordings.</p>
-            </div>
+            <h1 className="text-2xl font-bold text-foreground">Sales Dashboard</h1>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground border border-border rounded-full px-3 py-1">Updated {lastUpdated}</span>
-              <Button variant="outline" size="sm"><RefreshCw className="h-4 w-4 mr-1" /> Refresh</Button>
-              <Button size="sm">Save view</Button>
+              <span className="text-xs text-muted-foreground bg-muted rounded-full px-3 py-1.5">Updated {lastUpdated}</span>
+              <Button variant="outline" size="sm" className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Refresh</Button>
             </div>
           </div>
 
-          {/* Demo banner */}
-          <div className="bg-stat-green/10 border border-stat-green/30 rounded-lg px-4 py-2">
-            <p className="text-sm font-medium" style={{ color: "hsl(var(--stat-green))" }}>
-              Viewing Offline Demo Mode. Dummy data active.
+          <div className="bg-[hsl(var(--stat-green))]/10 border border-[hsl(var(--stat-green))]/20 rounded-xl px-4 py-2.5">
+            <p className="text-sm font-medium text-[hsl(var(--stat-green))]">
+              📊 Viewing offline demo mode — dummy data active
             </p>
           </div>
 
           <FilterBar filters={filters} onChange={setFilters} />
-          <OverviewCards {...overview} />
-          <BudgetTargets
-            bookings={bookings}
-            bookingTarget={30}
-            daysLeft={12}
-            totalCalls={overview.totalCalls}
-            callTarget={3000}
-            costPerBooking={3200}
-            monthlyBudget={25000}
-          />
-          <TrendsCharts dailyData={dailyData} hourlyData={hourlyData} />
-          <CallRecordingsTable calls={filteredCalls} />
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
+              <div className="space-y-6">
+                {widgetOrder.map(id => (
+                  <DraggableWidget key={id} id={id}>
+                    {widgetMap[id]}
+                  </DraggableWidget>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </main>
     </div>

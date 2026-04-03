@@ -1,19 +1,13 @@
-// Dummy data simulating Telavox + Pipedrive integration
-
 export interface CallRecord {
   id: string;
   date: string;
   time: string;
   direction: "outbound" | "inbound";
-  duration: number; // seconds
+  duration: number;
   status: "answered" | "missed" | "voicemail" | "busy";
-  connected: boolean; // spoke 10s+
-  contactName: string;
-  company: string;
   phone: string;
   recordingUrl?: string;
   notes?: string;
-  source: "telavox" | "pipedrive";
 }
 
 export interface Meeting {
@@ -35,25 +29,22 @@ export interface SavedView {
 }
 
 export interface DashboardFilters {
+  datePreset: string;
   startDate: string;
   endDate: string;
-  user: string;
-  source: string;
   direction: string;
   status: string;
 }
 
 export const defaultFilters: DashboardFilters = {
-  startDate: "2026-03-02",
+  datePreset: "last30",
+  startDate: "2026-03-04",
   endDate: "2026-04-03",
-  user: "all",
-  source: "all",
   direction: "all",
   status: "all",
 };
 
-const names = ["John Doe", "Jane Smith", "Mike Johnson", "Sara Wilson", "Tom Brown", "Lisa Chen", "David Park", "Emma Davis"];
-const companies = ["Acme Corp", "Stark Ind.", "Wayne Ent.", "Globex Corp", "Initech", "Umbrella Co", "Cyberdyne", "Wonka Ind."];
+const phones = ["+45 20123456", "+45 31234567", "+45 42345678", "+45 53456789", "+45 60987654", "+45 71098765", "+45 82109876", "+45 93210987"];
 
 function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -73,7 +64,6 @@ function generateCalls(): CallRecord[] {
       const status = randomFrom(statuses);
       const answered = status === "answered";
       const duration = answered ? 15 + Math.floor(Math.random() * 480) : Math.floor(Math.random() * 10);
-      const connected = answered && duration > 10;
 
       calls.push({
         id: `call-${d.toISOString().slice(0, 10)}-${i}`,
@@ -82,13 +72,9 @@ function generateCalls(): CallRecord[] {
         direction: Math.random() > 0.15 ? "outbound" : "inbound",
         duration,
         status,
-        connected,
-        contactName: randomFrom(names),
-        company: randomFrom(companies),
-        phone: `+45 ${Math.floor(10000000 + Math.random() * 90000000)}`,
+        phone: randomFrom(phones),
         recordingUrl: answered ? `https://recordings.telavox.example/rec-${Date.now()}-${i}` : undefined,
         notes: Math.random() > 0.7 ? "Interested in demo" : undefined,
-        source: Math.random() > 0.3 ? "telavox" : "pipedrive",
       });
     }
   }
@@ -109,35 +95,33 @@ export const dummyCalls = generateCalls();
 export const dummyMeetings = generateMeetings();
 
 export const defaultSavedViews: SavedView[] = [
-  { id: "v1", name: "Last 30 days — All", filters: defaultFilters, isDefault: true },
-  { id: "v2", name: "This week", filters: { ...defaultFilters, startDate: "2026-03-31", endDate: "2026-04-03" } },
+  { id: "v1", name: "Last 30 days", filters: defaultFilters, isDefault: true },
+  { id: "v2", name: "This week", filters: { ...defaultFilters, datePreset: "last7", startDate: "2026-03-27", endDate: "2026-04-03" } },
   { id: "v3", name: "Outbound only", filters: { ...defaultFilters, direction: "outbound" } },
 ];
 
-// Aggregation helpers
 export function getOverviewStats(calls: CallRecord[]) {
   const total = calls.length;
   const answered = calls.filter(c => c.status === "answered").length;
-  const connected = calls.filter(c => c.connected).length;
   const totalTalkTime = calls.reduce((sum, c) => sum + (c.status === "answered" ? c.duration : 0), 0);
 
   return {
     totalCalls: total,
     answered,
-    connected,
-    pickupRate: total > 0 ? Math.round((answered / total) * 100) : 0,
-    connectRate: total > 0 ? Math.round((connected / total) * 100) : 0,
+    successRate: total > 0 ? Math.round((answered / total) * 100) : 0,
     totalTalkTimeMinutes: Math.round(totalTalkTime / 60),
   };
 }
 
 export function getDailyData(calls: CallRecord[]) {
-  const byDate: Record<string, { calls: number; connected: number; talkTime: number }> = {};
+  const byDate: Record<string, { calls: number; answered: number; talkTime: number }> = {};
   calls.forEach(c => {
-    if (!byDate[c.date]) byDate[c.date] = { calls: 0, connected: 0, talkTime: 0 };
+    if (!byDate[c.date]) byDate[c.date] = { calls: 0, answered: 0, talkTime: 0 };
     byDate[c.date].calls++;
-    if (c.connected) byDate[c.date].connected++;
-    if (c.status === "answered") byDate[c.date].talkTime += c.duration;
+    if (c.status === "answered") {
+      byDate[c.date].answered++;
+      byDate[c.date].talkTime += c.duration;
+    }
   });
   return Object.entries(byDate)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -145,20 +129,20 @@ export function getDailyData(calls: CallRecord[]) {
       date: new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
       rawDate: date,
       calls: data.calls,
-      connected: data.connected,
+      answered: data.answered,
       talkTime: Math.round(data.talkTime / 60),
     }));
 }
 
 export function getHourlyData(calls: CallRecord[]) {
   const byHour: Record<number, number> = {};
-  calls.filter(c => c.connected).forEach(c => {
+  calls.filter(c => c.status === "answered").forEach(c => {
     const hour = parseInt(c.time.split(":")[0]);
     byHour[hour] = (byHour[hour] || 0) + 1;
   });
   return Array.from({ length: 12 }, (_, i) => ({
     hour: `${(8 + i).toString().padStart(2, "0")}:00`,
-    connects: byHour[8 + i] || 0,
+    answered: byHour[8 + i] || 0,
   }));
 }
 
@@ -167,7 +151,41 @@ export function filterCalls(calls: CallRecord[], filters: DashboardFilters): Cal
     if (c.date < filters.startDate || c.date > filters.endDate) return false;
     if (filters.direction !== "all" && c.direction !== filters.direction) return false;
     if (filters.status !== "all" && c.status !== filters.status) return false;
-    if (filters.source !== "all" && c.source !== filters.source) return false;
     return true;
   });
+}
+
+export function getDateRange(preset: string): { startDate: string; endDate: string } {
+  const today = new Date("2026-04-03");
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const end = fmt(today);
+
+  switch (preset) {
+    case "today":
+      return { startDate: end, endDate: end };
+    case "yesterday": {
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      return { startDate: fmt(y), endDate: fmt(y) };
+    }
+    case "last7": {
+      const s = new Date(today);
+      s.setDate(s.getDate() - 6);
+      return { startDate: fmt(s), endDate: end };
+    }
+    case "last14": {
+      const s = new Date(today);
+      s.setDate(s.getDate() - 13);
+      return { startDate: fmt(s), endDate: end };
+    }
+    case "last30": {
+      const s = new Date(today);
+      s.setDate(s.getDate() - 29);
+      return { startDate: fmt(s), endDate: end };
+    }
+    case "thisMonth":
+      return { startDate: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`, endDate: end };
+    default:
+      return { startDate: "2026-03-04", endDate: end };
+  }
 }
