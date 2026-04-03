@@ -10,6 +10,9 @@ import { BudgetTargets } from "@/components/dashboard/BudgetTargets";
 import { TrendsCharts } from "@/components/dashboard/TrendsCharts";
 import { CallRecordingsTable } from "@/components/dashboard/CallRecordingsTable";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
+import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
+import { GamificationBar } from "@/components/dashboard/GamificationBar";
+import { BookingsDialog } from "@/components/dashboard/BookingsDialog";
 import {
   dummyCalls,
   defaultFilters,
@@ -22,7 +25,7 @@ import {
   type SavedView,
 } from "@/data/dummyData";
 
-const defaultWidgetOrder = ["overview", "targets", "trends", "calls"];
+const defaultWidgetOrder = ["overview", "gamification", "targets", "trends", "calls"];
 
 export default function Index() {
   const [views, setViews] = useState<SavedView[]>(defaultSavedViews);
@@ -31,6 +34,7 @@ export default function Index() {
   const [bookingTarget, setBookingTarget] = useState(30);
   const [callTarget, setCallTarget] = useState(3000);
   const [widgetOrder, setWidgetOrder] = useState(defaultWidgetOrder);
+  const [showBookings, setShowBookings] = useState(false);
   const [lastUpdated] = useState(new Date().toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }));
 
   const filteredCalls = useMemo(() => filterCalls(dummyCalls, filters), [filters]);
@@ -70,7 +74,8 @@ export default function Index() {
   }, []);
 
   const widgetMap: Record<string, React.ReactNode> = {
-    overview: <OverviewCards {...overview} />,
+    overview: <OverviewCards {...overview} bookings={bookings} onBookingsClick={() => setShowBookings(true)} />,
+    gamification: <GamificationBar totalCalls={overview.totalCalls} answered={overview.answered} bookings={bookings} successRate={overview.successRate} />,
     targets: (
       <BudgetTargets
         bookings={bookings}
@@ -98,7 +103,7 @@ export default function Index() {
       />
 
       <main className="flex-1 p-6 overflow-auto">
-        <div className="max-w-[1400px] mx-auto space-y-6">
+        <div className="max-w-[1400px] mx-auto space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h1 className="text-2xl font-bold text-foreground">Sales Dashboard</h1>
             <div className="flex items-center gap-2">
@@ -107,17 +112,13 @@ export default function Index() {
             </div>
           </div>
 
-          <div className="bg-[hsl(var(--stat-green))]/10 border border-[hsl(var(--stat-green))]/20 rounded-xl px-4 py-2.5">
-            <p className="text-sm font-medium text-[hsl(var(--stat-green))]">
-              📊 Viewing offline demo mode — dummy data active
-            </p>
-          </div>
+          <MotivationalQuote />
 
           <FilterBar filters={filters} onChange={setFilters} />
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {widgetOrder.map(id => (
                   <DraggableWidget key={id} id={id}>
                     {widgetMap[id]}
@@ -128,6 +129,12 @@ export default function Index() {
           </DndContext>
         </div>
       </main>
+
+      <BookingsDialog
+        open={showBookings}
+        onOpenChange={setShowBookings}
+        dateRange={{ startDate: filters.startDate, endDate: filters.endDate }}
+      />
     </div>
   );
 }

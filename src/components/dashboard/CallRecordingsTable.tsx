@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Play, ChevronDown, ChevronUp, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { Search, Play, ChevronDown, ChevronUp, PhoneIncoming, PhoneOutgoing, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ export function CallRecordingsTable({ calls }: CallRecordingsTableProps) {
   const [sortField, setSortField] = useState<"date" | "duration">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
 
   const filtered = calls
     .filter(c => c.phone.includes(search) || c.notes?.toLowerCase().includes(search.toLowerCase()))
@@ -23,12 +25,15 @@ export function CallRecordingsTable({ calls }: CallRecordingsTableProps) {
       const mul = sortDir === "asc" ? 1 : -1;
       if (sortField === "date") return mul * (`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
       return mul * (a.duration - b.duration);
-    })
-    .slice(0, 50);
+    });
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   const toggleSort = (field: "date" | "duration") => {
     if (sortField === field) setSortDir(d => (d === "asc" ? "desc" : "asc"));
     else { setSortField(field); setSortDir("desc"); }
+    setPage(0);
   };
 
   const SortIcon = ({ field }: { field: "date" | "duration" }) =>
@@ -54,14 +59,14 @@ export function CallRecordingsTable({ calls }: CallRecordingsTableProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="font-semibold text-foreground">Recent Calls</p>
-            <p className="text-xs text-muted-foreground">Click a row for details · Phone numbers from Telavox</p>
+            <p className="text-xs text-muted-foreground">{filtered.length} calls · Page {page + 1} of {totalPages}</p>
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by phone or notes..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setPage(0); }}
               className="pl-9 text-sm bg-background"
             />
           </div>
@@ -85,7 +90,7 @@ export function CallRecordingsTable({ calls }: CallRecordingsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(call => (
+            {paged.map(call => (
               <tr key={call.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => setSelectedCall(call)}>
                 <td className="px-4 py-3 whitespace-nowrap text-foreground">{call.date} {call.time}</td>
                 <td className="px-4 py-3">
@@ -108,6 +113,27 @@ export function CallRecordingsTable({ calls }: CallRecordingsTableProps) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+        <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+          <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+        </Button>
+        <div className="flex items-center gap-1">
+          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+            const p = page < 3 ? i : page - 2 + i;
+            if (p >= totalPages) return null;
+            return (
+              <Button key={p} variant={p === page ? "default" : "ghost"} size="sm" className="h-8 w-8 p-0" onClick={() => setPage(p)}>
+                {p + 1}
+              </Button>
+            );
+          })}
+        </div>
+        <Button variant="ghost" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+          Next <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
       </div>
 
       <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
