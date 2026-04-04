@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_settings: {
+        Row: {
+          created_at: string
+          id: string
+          pipedrive_api_token: string
+          pipedrive_base_url: string
+          telavox_api_key: string
+          telavox_base_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pipedrive_api_token?: string
+          pipedrive_base_url?: string
+          telavox_api_key?: string
+          telavox_base_url?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pipedrive_api_token?: string
+          pipedrive_base_url?: string
+          telavox_api_key?: string
+          telavox_base_url?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
