@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { RefreshCw, Save } from "lucide-react";
+import { SettingsDialog } from "@/components/dashboard/SettingsDialog";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arraySwap } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
