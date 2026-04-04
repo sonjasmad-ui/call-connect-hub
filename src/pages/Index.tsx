@@ -129,6 +129,7 @@ export default function Index() {
                   <Button size="sm" className="w-full" onClick={() => handleSaveView(saveName)} disabled={!saveName.trim()}>Save</Button>
                 </PopoverContent>
               </Popover>
+              <SettingsDialog />
               <Button variant="outline" size="sm" className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Refresh</Button>
             </div>
           </div>
