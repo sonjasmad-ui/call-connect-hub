@@ -11,7 +11,7 @@ interface ViewSidebarProps {
 }
 
 export function ViewSidebar({ views, activeViewId, onSelectView, onDeleteView }: ViewSidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <aside className={cn(
