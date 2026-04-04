@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { LayoutDashboard, Trash2, Star, BarChart3, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LayoutDashboard, Trash2, Star, BarChart3, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
 import type { SavedView } from "@/data/dummyData";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ViewSidebarProps {
   views: SavedView[];
@@ -12,6 +13,7 @@ interface ViewSidebarProps {
 
 export function ViewSidebar({ views, activeViewId, onSelectView, onDeleteView }: ViewSidebarProps) {
   const [collapsed, setCollapsed] = useState(true);
+  const { signOut, user } = useAuth();
 
   return (
     <aside className={cn(
@@ -75,6 +77,23 @@ export function ViewSidebar({ views, activeViewId, onSelectView, onDeleteView }:
           </button>
         ))}
       </div>
+
+      {/* Logout */}
+      <button
+        onClick={signOut}
+        title={collapsed ? "Sign out" : undefined}
+        className={cn(
+          "w-full rounded-lg text-sm flex items-center gap-2 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-150 mt-4",
+          collapsed ? "justify-center py-2.5" : "px-3 py-2.5"
+        )}
+      >
+        <LogOut className="h-3.5 w-3.5" />
+        {!collapsed && "Sign out"}
+      </button>
+
+      {!collapsed && user && (
+        <p className="text-[10px] text-sidebar-muted truncate px-2 mt-2">{user.email}</p>
+      )}
     </aside>
   );
 }
