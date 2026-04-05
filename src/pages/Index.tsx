@@ -17,6 +17,7 @@ import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
 import { BookingsDialog } from "@/components/dashboard/BookingsDialog";
 import {
   dummyCalls,
+  dummyMeetings,
   defaultFilters,
   defaultSavedViews,
   filterCalls,
