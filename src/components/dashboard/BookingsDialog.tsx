@@ -17,7 +17,7 @@ const stageColors: Record<string, string> = {
 };
 
 export function BookingsDialog({ open, onOpenChange, dateRange }: BookingsDialogProps) {
-  const bookings = dummyMeetings.filter(m => m.date >= dateRange.startDate && m.date <= dateRange.endDate);
+  const bookings = dummyMeetings.filter(m => m.createdDate >= dateRange.startDate && m.createdDate <= dateRange.endDate);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
