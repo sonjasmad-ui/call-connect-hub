@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { RefreshCw, Save } from "lucide-react";
+import { useState, useCallback } from "react";
+import { RefreshCw, Save, Loader2, Wifi, WifiOff } from "lucide-react";
 import { SettingsDialog } from "@/components/dashboard/SettingsDialog";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arraySwap } from "@dnd-kit/sortable";
@@ -15,18 +15,14 @@ import { CallRecordingsTable } from "@/components/dashboard/CallRecordingsTable"
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
 import { BookingsDialog } from "@/components/dashboard/BookingsDialog";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import {
-  dummyCalls,
-  dummyMeetings,
   defaultFilters,
   defaultSavedViews,
-  filterCalls,
-  getOverviewStats,
-  getDailyData,
-  getHourlyData,
   type DashboardFilters,
   type SavedView,
 } from "@/data/dummyData";
+import { Badge } from "@/components/ui/badge";
 
 const defaultWidgetOrder = ["overview", "targets", "trends", "calls"];
 
@@ -40,13 +36,24 @@ export default function Index() {
   const [showBookings, setShowBookings] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
-  const [lastUpdated] = useState(new Date().toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }));
 
-  const filteredCalls = useMemo(() => filterCalls(dummyCalls, filters), [filters]);
-  const overview = useMemo(() => getOverviewStats(filteredCalls), [filteredCalls]);
-  const dailyData = useMemo(() => getDailyData(filteredCalls), [filteredCalls]);
-  const hourlyData = useMemo(() => getHourlyData(filteredCalls), [filteredCalls]);
-  const bookings = useMemo(() => dummyMeetings.filter(m => m.createdDate >= filters.startDate && m.createdDate <= filters.endDate).length, [filters]);
+  const {
+    filteredCalls,
+    meetings,
+    overview,
+    dailyData,
+    hourlyData,
+    bookingsCount,
+    loading,
+    usingLiveData,
+    telavoxUsers,
+    pipedriveUsers,
+    selectedTelavoxUser,
+    selectedPipedriveUser,
+    setSelectedTelavoxUser,
+    setSelectedPipedriveUser,
+    refresh,
+  } = useDashboardData(filters);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor));
 
@@ -82,10 +89,10 @@ export default function Index() {
   }, []);
 
   const widgetMap: Record<string, React.ReactNode> = {
-    overview: <OverviewCards {...overview} bookings={bookings} onBookingsClick={() => setShowBookings(true)} />,
+    overview: <OverviewCards {...overview} bookings={bookingsCount} onBookingsClick={() => setShowBookings(true)} />,
     targets: (
       <BudgetTargets
-        bookings={bookings}
+        bookings={bookingsCount}
         bookingTarget={bookingTarget}
         daysLeft={12}
         totalCalls={overview.totalCalls}
@@ -110,9 +117,26 @@ export default function Index() {
       <main className="flex-1 p-6 overflow-auto">
         <div className="max-w-[1400px] mx-auto space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h1 className="text-2xl font-bold text-foreground">Sales Dashboard</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground">Sales Dashboard</h1>
+              <div className="flex items-center gap-1.5">
+                {usingLiveData.telavox ? (
+                  <Badge variant="outline" className="text-[10px] gap-1 border-emerald-500/30 text-emerald-600">
+                    <Wifi className="h-3 w-3" /> Telavox
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] gap-1 border-muted text-muted-foreground">
+                    <WifiOff className="h-3 w-3" /> Demo
+                  </Badge>
+                )}
+                {usingLiveData.pipedrive ? (
+                  <Badge variant="outline" className="text-[10px] gap-1 border-emerald-500/30 text-emerald-600">
+                    <Wifi className="h-3 w-3" /> Pipedrive
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground bg-muted rounded-full px-3 py-1.5">Updated {lastUpdated}</span>
               <Popover open={saveOpen} onOpenChange={setSaveOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1.5"><Save className="h-3.5 w-3.5" /> Save View</Button>
@@ -130,14 +154,25 @@ export default function Index() {
                   <Button size="sm" className="w-full" onClick={() => handleSaveView(saveName)} disabled={!saveName.trim()}>Save</Button>
                 </PopoverContent>
               </Popover>
-              <SettingsDialog />
-              <Button variant="outline" size="sm" className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Refresh</Button>
+              <SettingsDialog onSettingsSaved={refresh} />
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={refresh} disabled={loading}>
+                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Refresh
+              </Button>
             </div>
           </div>
 
           <MotivationalQuote />
 
-          <FilterBar filters={filters} onChange={setFilters} />
+          <FilterBar
+            filters={filters}
+            onChange={setFilters}
+            telavoxUsers={telavoxUsers}
+            pipedriveUsers={pipedriveUsers}
+            selectedTelavoxUser={selectedTelavoxUser}
+            selectedPipedriveUser={selectedPipedriveUser}
+            onTelavoxUserChange={setSelectedTelavoxUser}
+            onPipedriveUserChange={setSelectedPipedriveUser}
+          />
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
@@ -156,6 +191,7 @@ export default function Index() {
       <BookingsDialog
         open={showBookings}
         onOpenChange={setShowBookings}
+        meetings={meetings}
         dateRange={{ startDate: filters.startDate, endDate: filters.endDate }}
       />
     </div>
