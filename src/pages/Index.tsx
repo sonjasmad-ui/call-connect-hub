@@ -121,7 +121,7 @@ export default function Index() {
               <h1 className="text-2xl font-bold text-foreground">Sales Dashboard</h1>
               <div className="flex items-center gap-1.5">
                 {usingLiveData.telavox ? (
-                  <Badge variant="outline" className="text-[10px] gap-1 border-emerald-500/30 text-emerald-600">
+                  <Badge variant="outline" className="text-[10px] gap-1 border-[hsl(var(--stat-green))]/30 text-[hsl(var(--stat-green))]">
                     <Wifi className="h-3 w-3" /> Telavox
                   </Badge>
                 ) : (
