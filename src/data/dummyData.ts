@@ -17,6 +17,7 @@ export interface Meeting {
   company: string;
   date: string;
   time: string;
+  createdDate: string;
   pipedriveStage: string;
   dealValue?: number;
 }
