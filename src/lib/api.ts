@@ -1,50 +1,86 @@
-const API_BASE = "http://localhost:3001/api";
+import { supabase } from "@/integrations/supabase/client";
 
-export interface ApiHealth {
-  status: string;
-  integrations: {
-    telavox: "connected" | "not configured";
-    pipedrive: "connected" | "not configured";
-  };
+const STORAGE_KEY = "calltrack_api_settings";
+
+interface ApiSettings {
+  telavox_api_key: string;
+  telavox_base_url: string;
+  pipedrive_api_token: string;
+  pipedrive_base_url: string;
 }
 
-export async function checkHealth(): Promise<ApiHealth | null> {
+export function getApiSettings(): ApiSettings {
   try {
-    const res = await fetch(`${API_BASE}/health`);
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { telavox_api_key: "", telavox_base_url: "https://api.telavox.se", pipedrive_api_token: "", pipedrive_base_url: "" };
 }
 
-export async function fetchCalls(from: string, to: string) {
-  const res = await fetch(`${API_BASE}/telavox/calls?from=${from}&to=${to}`);
-  if (!res.ok) throw new Error("Failed to fetch calls");
-  const data = await res.json();
-  return data.calls;
+export function hasTelavoxConfig(): boolean {
+  return !!getApiSettings().telavox_api_key;
 }
 
-export async function fetchMeetings(start: string, end: string) {
-  const res = await fetch(`${API_BASE}/pipedrive/activities?type=meeting&start=${start}&end=${end}`);
-  if (!res.ok) throw new Error("Failed to fetch meetings");
-  const data = await res.json();
-  return data.meetings;
+export function hasPipedriveConfig(): boolean {
+  return !!getApiSettings().pipedrive_api_token;
 }
 
-export async function searchContact(phone: string) {
-  const res = await fetch(`${API_BASE}/pipedrive/person/search?phone=${encodeURIComponent(phone)}`);
-  if (!res.ok) throw new Error("Failed to search contact");
-  return res.json();
+async function invokeFunction(name: string, body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) throw new Error(error.message || `Edge function ${name} failed`);
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
-export async function fetchDeals() {
-  const res = await fetch(`${API_BASE}/pipedrive/deals`);
-  if (!res.ok) throw new Error("Failed to fetch deals");
-  const data = await res.json();
-  return data.deals;
+// ── Telavox ──
+
+export async function fetchTelavoxCalls(fromDate: string, toDate: string) {
+  const settings = getApiSettings();
+  if (!settings.telavox_api_key) throw new Error("Telavox API key not configured");
+
+  const data = await invokeFunction("telavox-calls", {
+    apiKey: settings.telavox_api_key,
+    baseUrl: settings.telavox_base_url || undefined,
+    fromDate,
+    toDate,
+  });
+  return data.calls as any[];
 }
 
-export function getRecordingUrl(recordingId: string) {
-  return `${API_BASE}/telavox/recording/${recordingId}`;
+export async function fetchTelavoxUsers() {
+  const settings = getApiSettings();
+  if (!settings.telavox_api_key) throw new Error("Telavox API key not configured");
+
+  const data = await invokeFunction("telavox-users", {
+    apiKey: settings.telavox_api_key,
+    baseUrl: settings.telavox_base_url || undefined,
+  });
+  return data.users as Array<{ id: string; name: string; email: string; extension: string }>;
+}
+
+// ── Pipedrive ──
+
+export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number) {
+  const settings = getApiSettings();
+  if (!settings.pipedrive_api_token) throw new Error("Pipedrive API token not configured");
+
+  const data = await invokeFunction("pipedrive-activities", {
+    apiToken: settings.pipedrive_api_token,
+    baseUrl: settings.pipedrive_base_url || undefined,
+    startDate,
+    endDate,
+    userId: userId || undefined,
+  });
+  return data.meetings as any[];
+}
+
+export async function fetchPipedriveUsers() {
+  const settings = getApiSettings();
+  if (!settings.pipedrive_api_token) throw new Error("Pipedrive API token not configured");
+
+  const data = await invokeFunction("pipedrive-users", {
+    apiToken: settings.pipedrive_api_token,
+    baseUrl: settings.pipedrive_base_url || undefined,
+  });
+  return data.users as Array<{ id: number; name: string; email: string; active: boolean }>;
 }
