@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Settings, Eye, EyeOff } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,17 @@ function loadSettings(): ApiSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { telavox_api_key: "", telavox_base_url: "https://api.telavox.se/v1", pipedrive_api_token: "", pipedrive_base_url: "" };
+  return { telavox_api_key: "", telavox_base_url: "https://api.telavox.se", pipedrive_api_token: "", pipedrive_base_url: "" };
 }
 
-export function SettingsDialog() {
+interface SettingsDialogProps {
+  onSettingsSaved?: () => void;
+}
+
+export function SettingsDialog({ onSettingsSaved }: SettingsDialogProps) {
   const [open, setOpen] = useState(false);
   const [telavoxKey, setTelavoxKey] = useState("");
-  const [telavoxUrl, setTelavoxUrl] = useState("https://api.telavox.se/v1");
+  const [telavoxUrl, setTelavoxUrl] = useState("https://api.telavox.se");
   const [pipedriveToken, setPipedriveToken] = useState("");
   const [pipedriveUrl, setPipedriveUrl] = useState("");
   const [showTelavox, setShowTelavox] = useState(false);
@@ -52,6 +56,8 @@ export function SettingsDialog() {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     toast.success("API settings saved!");
+    setOpen(false);
+    onSettingsSaved?.();
   };
 
   return (
@@ -72,32 +78,15 @@ export function SettingsDialog() {
             <div className="space-y-2">
               <Label htmlFor="telavox-key" className="text-xs text-muted-foreground">API Key</Label>
               <div className="relative">
-                <Input
-                  id="telavox-key"
-                  type={showTelavox ? "text" : "password"}
-                  value={telavoxKey}
-                  onChange={e => setTelavoxKey(e.target.value)}
-                  placeholder="Enter Telavox API key..."
-                  className="pr-10 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowTelavox(!showTelavox)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
+                <Input id="telavox-key" type={showTelavox ? "text" : "password"} value={telavoxKey} onChange={e => setTelavoxKey(e.target.value)} placeholder="Enter Telavox API key..." className="pr-10 text-sm" />
+                <button type="button" onClick={() => setShowTelavox(!showTelavox)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showTelavox ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="telavox-url" className="text-xs text-muted-foreground">Base URL</Label>
-              <Input
-                id="telavox-url"
-                value={telavoxUrl}
-                onChange={e => setTelavoxUrl(e.target.value)}
-                placeholder="https://api.telavox.se/v1"
-                className="text-sm"
-              />
+              <Input id="telavox-url" value={telavoxUrl} onChange={e => setTelavoxUrl(e.target.value)} placeholder="https://api.telavox.se" className="text-sm" />
             </div>
           </div>
 
@@ -108,43 +97,24 @@ export function SettingsDialog() {
             <div className="space-y-2">
               <Label htmlFor="pipedrive-token" className="text-xs text-muted-foreground">API Token</Label>
               <div className="relative">
-                <Input
-                  id="pipedrive-token"
-                  type={showPipedrive ? "text" : "password"}
-                  value={pipedriveToken}
-                  onChange={e => setPipedriveToken(e.target.value)}
-                  placeholder="Enter Pipedrive API token..."
-                  className="pr-10 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPipedrive(!showPipedrive)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
+                <Input id="pipedrive-token" type={showPipedrive ? "text" : "password"} value={pipedriveToken} onChange={e => setPipedriveToken(e.target.value)} placeholder="Enter Pipedrive API token..." className="pr-10 text-sm" />
+                <button type="button" onClick={() => setShowPipedrive(!showPipedrive)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPipedrive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="pipedrive-url" className="text-xs text-muted-foreground">Base URL</Label>
-              <Input
-                id="pipedrive-url"
-                value={pipedriveUrl}
-                onChange={e => setPipedriveUrl(e.target.value)}
-                placeholder="https://your-company.pipedrive.com/api/v1"
-                className="text-sm"
-              />
+              <Input id="pipedrive-url" value={pipedriveUrl} onChange={e => setPipedriveUrl(e.target.value)} placeholder="https://your-company.pipedrive.com/api/v1" className="text-sm" />
             </div>
           </div>
 
           <Separator />
 
-          <Button onClick={handleSave} className="w-full">
-            Save Settings
-          </Button>
+          <Button onClick={handleSave} className="w-full">Save Settings</Button>
 
           <p className="text-xs text-muted-foreground">
-            Your API tokens are stored in your browser's local storage and persist across sessions.
+            Tokens are stored in your browser and sent securely to backend functions. Add your keys and hit Save, then Refresh the dashboard.
           </p>
         </div>
       </DialogContent>
