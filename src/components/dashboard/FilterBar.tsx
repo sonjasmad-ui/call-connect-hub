@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { format } from "date-fns";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -12,6 +11,12 @@ import { type DashboardFilters, getDateRange } from "@/data/dummyData";
 interface FilterBarProps {
   filters: DashboardFilters;
   onChange: (filters: DashboardFilters) => void;
+  telavoxUsers?: Array<{ id: string; name: string }>;
+  pipedriveUsers?: Array<{ id: number; name: string }>;
+  selectedTelavoxUser?: string;
+  selectedPipedriveUser?: string;
+  onTelavoxUserChange?: (val: string) => void;
+  onPipedriveUserChange?: (val: string) => void;
 }
 
 const datePresets = [
@@ -24,7 +29,16 @@ const datePresets = [
   { value: "custom", label: "Custom range" },
 ];
 
-export function FilterBar({ filters, onChange }: FilterBarProps) {
+export function FilterBar({
+  filters,
+  onChange,
+  telavoxUsers = [],
+  pipedriveUsers = [],
+  selectedTelavoxUser = "all",
+  selectedPipedriveUser = "all",
+  onTelavoxUserChange,
+  onPipedriveUserChange,
+}: FilterBarProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(filters.startDate));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date(filters.endDate));
 
@@ -110,6 +124,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           </SelectContent>
         </Select>
       </div>
+
       <div className="min-w-[140px]">
         <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</label>
         <Select value={filters.status} onValueChange={v => onChange({ ...filters, status: v })}>
@@ -123,6 +138,36 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           </SelectContent>
         </Select>
       </div>
+
+      {telavoxUsers.length > 0 && onTelavoxUserChange && (
+        <div className="min-w-[160px]">
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Telavox User</label>
+          <Select value={selectedTelavoxUser} onValueChange={onTelavoxUserChange}>
+            <SelectTrigger className="text-sm bg-background"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All users</SelectItem>
+              {telavoxUsers.map(u => (
+                <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {pipedriveUsers.length > 0 && onPipedriveUserChange && (
+        <div className="min-w-[160px]">
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pipedrive User</label>
+          <Select value={selectedPipedriveUser} onValueChange={onPipedriveUserChange}>
+            <SelectTrigger className="text-sm bg-background"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All users</SelectItem>
+              {pipedriveUsers.map(u => (
+                <SelectItem key={String(u.id)} value={String(u.id)}>{u.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }
