@@ -1,10 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { dummyMeetings } from "@/data/dummyData";
+import type { Meeting } from "@/data/dummyData";
 
 interface BookingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  meetings: Meeting[];
   dateRange: { startDate: string; endDate: string };
 }
 
@@ -16,17 +16,20 @@ const stageColors: Record<string, string> = {
   Negotiation: "bg-[hsl(var(--stat-green))]/15 text-[hsl(var(--stat-green))]",
 };
 
-export function BookingsDialog({ open, onOpenChange, dateRange }: BookingsDialogProps) {
-  const bookings = dummyMeetings.filter(m => m.createdDate >= dateRange.startDate && m.createdDate <= dateRange.endDate);
+export function BookingsDialog({ open, onOpenChange, meetings, dateRange }: BookingsDialogProps) {
+  const bookings = meetings.filter(m => {
+    const d = m.createdDate || m.date;
+    return d >= dateRange.startDate && d <= dateRange.endDate;
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Bookings</DialogTitle>
+          <DialogTitle>Bookings ({bookings.length})</DialogTitle>
         </DialogHeader>
         {bookings.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No bookings in this date range</p>
+          <p className="text-sm text-muted-foreground text-center py-8">No bookings created in this date range</p>
         ) : (
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {bookings.map(m => (
