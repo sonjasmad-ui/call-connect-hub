@@ -84,11 +84,11 @@ function generateCalls(): CallRecord[] {
 
 function generateMeetings(): Meeting[] {
   return [
-    { id: "m1", title: "Discovery Call", contactName: "John Doe", company: "Acme Corp", date: "2026-04-04", time: "14:00", pipedriveStage: "Discovery", dealValue: 45000 },
-    { id: "m2", title: "Follow up", contactName: "Jane Smith", company: "Stark Ind.", date: "2026-04-05", time: "10:30", pipedriveStage: "Proposal", dealValue: 32000 },
-    { id: "m3", title: "Demo", contactName: "Mike Johnson", company: "Wayne Ent.", date: "2026-04-07", time: "09:00", pipedriveStage: "Demo", dealValue: 78000 },
-    { id: "m4", title: "Closing Call", contactName: "Sara Wilson", company: "Globex Corp", date: "2026-04-08", time: "15:30", pipedriveStage: "Negotiation", dealValue: 55000 },
-    { id: "m5", title: "Intro Meeting", contactName: "Lisa Chen", company: "Initech", date: "2026-04-09", time: "11:00", pipedriveStage: "Lead", dealValue: 28000 },
+    { id: "m1", title: "Discovery Call", contactName: "John Doe", company: "Acme Corp", date: "2026-04-04", time: "14:00", createdDate: "2026-03-20", pipedriveStage: "Discovery", dealValue: 45000 },
+    { id: "m2", title: "Follow up", contactName: "Jane Smith", company: "Stark Ind.", date: "2026-04-05", time: "10:30", createdDate: "2026-03-22", pipedriveStage: "Proposal", dealValue: 32000 },
+    { id: "m3", title: "Demo", contactName: "Mike Johnson", company: "Wayne Ent.", date: "2026-04-07", time: "09:00", createdDate: "2026-03-15", pipedriveStage: "Demo", dealValue: 78000 },
+    { id: "m4", title: "Closing Call", contactName: "Sara Wilson", company: "Globex Corp", date: "2026-04-08", time: "15:30", createdDate: "2026-04-01", pipedriveStage: "Negotiation", dealValue: 55000 },
+    { id: "m5", title: "Intro Meeting", contactName: "Lisa Chen", company: "Initech", date: "2026-04-09", time: "11:00", createdDate: "2026-04-02", pipedriveStage: "Lead", dealValue: 28000 },
   ];
 }
 
