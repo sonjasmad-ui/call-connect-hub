@@ -1,38 +1,27 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Loader2 } from "lucide-react";
+import { BarChart3, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+const ACCESS_CODE = "WeLoveSE2026!";
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error(error.message);
-      }
+    if (code === ACCESS_CODE) {
+      sessionStorage.setItem("dashboard_access", "granted");
+      navigate("/", { replace: true });
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: window.location.origin },
-      });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Account created! Check your email to verify.");
-      }
+      toast.error("Incorrect access code");
     }
     setLoading(false);
   };
@@ -44,50 +33,32 @@ export default function Auth() {
           <div className="mx-auto h-12 w-12 rounded-xl gradient-bar flex items-center justify-center">
             <BarChart3 className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-xl">{isLogin ? "Welcome back" : "Create account"}</CardTitle>
-          <CardDescription>
-            {isLogin ? "Sign in to your CallTrack dashboard" : "Get started with CallTrack"}
-          </CardDescription>
+          <CardTitle className="text-xl">Dashboard Access</CardTitle>
+          <CardDescription>Enter the access code to continue</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
+              <Label htmlFor="code">Access Code</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="code"
+                  type="password"
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10"
+                  required
+                  autoFocus
+                />
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {isLogin ? "Sign in" : "Create account"}
+              Enter Dashboard
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>

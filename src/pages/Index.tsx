@@ -17,6 +17,7 @@ import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
 import { BookingsDialog } from "@/components/dashboard/BookingsDialog";
 import {
   dummyCalls,
+  dummyMeetings,
   defaultFilters,
   defaultSavedViews,
   filterCalls,
@@ -45,7 +46,7 @@ export default function Index() {
   const overview = useMemo(() => getOverviewStats(filteredCalls), [filteredCalls]);
   const dailyData = useMemo(() => getDailyData(filteredCalls), [filteredCalls]);
   const hourlyData = useMemo(() => getHourlyData(filteredCalls), [filteredCalls]);
-  const bookings = 15;
+  const bookings = useMemo(() => dummyMeetings.filter(m => m.createdDate >= filters.startDate && m.createdDate <= filters.endDate).length, [filters]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor));
 
