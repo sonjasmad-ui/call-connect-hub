@@ -130,7 +130,7 @@ export default function Index() {
                   </Badge>
                 )}
                 {usingLiveData.pipedrive ? (
-                  <Badge variant="outline" className="text-[10px] gap-1 border-emerald-500/30 text-emerald-600">
+                  <Badge variant="outline" className="text-[10px] gap-1 border-[hsl(var(--stat-green))]/30 text-[hsl(var(--stat-green))]">
                     <Wifi className="h-3 w-3" /> Pipedrive
                   </Badge>
                 ) : null}
