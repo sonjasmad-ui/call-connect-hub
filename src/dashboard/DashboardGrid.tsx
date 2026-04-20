@@ -1,12 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
-import RGL, { Responsive, WidthProvider } from "react-grid-layout";
+import { Responsive, WidthProvider, type Layout } from "react-grid-layout";
 import { Settings2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "./WidgetRenderer";
 import type { DashboardConfig, WidgetConfig } from "./types";
 import type { MetricInputs } from "./metrics";
-
-type LayoutItem = RGL.Layout;
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -32,20 +30,19 @@ export function DashboardGrid({
   }, []);
 
   const layouts = useMemo(() => {
-    const lg: LayoutItem[] = dashboard.widgets.map(w => ({
+    const lg: Layout[] = dashboard.widgets.map(w => ({
       i: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h, minW: 2, minH: 2,
     }));
-    // Mobile: stack each widget full width, in current order
     const sorted = [...dashboard.widgets].sort((a, b) =>
       a.layout.y === b.layout.y ? a.layout.x - b.layout.x : a.layout.y - b.layout.y,
     );
-    const xs: LayoutItem[] = sorted.map((w, idx) => ({
+    const xs: Layout[] = sorted.map((w, idx) => ({
       i: w.id, x: 0, y: idx * 4, w: 4, h: Math.max(3, Math.min(w.layout.h, 5)), static: true,
     }));
     return { lg, md: lg, sm: lg, xs, xxs: xs };
   }, [dashboard.widgets]);
 
-  const handleLayoutChange = (current: LayoutItem[]) => {
+  const handleLayoutChange = (current: Layout[]) => {
     if (isMobile || !editMode) return;
     onLayoutsChange(current.map(l => ({ id: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
   };
