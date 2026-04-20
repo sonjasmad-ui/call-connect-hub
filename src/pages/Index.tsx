@@ -1,21 +1,21 @@
 import { useState, useMemo } from "react";
-import { RefreshCw, Loader2, Wifi, WifiOff, Plus, Pencil, Check } from "lucide-react";
-import { SettingsDialog } from "@/components/dashboard/SettingsDialog";
+import { useNavigate } from "react-router-dom";
+import {
+  RefreshCw, Loader2, Wifi, WifiOff, Plus, Pencil, Check, LogOut, BarChart3,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SettingsDialog } from "@/components/dashboard/SettingsDialog";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { defaultFilters, type DashboardFilters } from "@/data/dummyData";
-
 import { useDashboards } from "@/dashboard/useDashboards";
 import { DashboardSwitcher } from "@/dashboard/DashboardSwitcher";
 import { DashboardGrid } from "@/dashboard/DashboardGrid";
 import { WidgetLibrary } from "@/dashboard/WidgetLibrary";
 import { WidgetSettings } from "@/dashboard/WidgetSettings";
 import type { WidgetConfig } from "@/dashboard/types";
-import { useNavigate } from "react-router-dom";
-import { LogOut, BarChart3 } from "lucide-react";
 
 export default function Index() {
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
