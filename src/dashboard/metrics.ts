@@ -168,7 +168,7 @@ export function computeBreakdown(metric: string, input: MetricInputs): Array<{ n
 }
 
 /** Table metrics → opaque rows; widget renderer knows how to render each. */
-export function computeTableRows(metric: string, input: MetricInputs): Array<Record<string, unknown>> {
+export function computeTableRows(metric: string, input: MetricInputs): unknown[] {
   switch (metric) {
     case "recentCalls":
     case "callRecordings": {
