@@ -1,8 +1,8 @@
+@import "./dashboard/grid.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "./dashboard/grid.css";
 
 @layer base {
   :root {
