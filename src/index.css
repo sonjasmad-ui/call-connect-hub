@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "./dashboard/grid.css";
+
 @layer base {
   :root {
     --background: 225 25% 97%;
