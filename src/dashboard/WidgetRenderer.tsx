@@ -112,9 +112,9 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
             </p>
             {/* Data interval under title */}
             <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
-              {inputs.dateRange === "7d" ? "Last 7 days" :
-               inputs.dateRange === "30d" ? "Last 30 days" :
-               inputs.dateRange === "90d" ? "Last 90 days" :
+              {inputs.dateRange === "last7" ? "Last 7 days" :
+               inputs.dateRange === "last30" ? "Last 30 days" :
+               inputs.dateRange === "last90" ? "Last 90 days" :
                inputs.dateRange === "thisMonth" ? "This month" :
                inputs.dateRange === "lastMonth" ? "Last month" :
                inputs.dateRange === "thisWeek" ? "This week" :
