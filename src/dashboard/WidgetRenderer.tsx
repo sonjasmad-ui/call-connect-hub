@@ -103,18 +103,16 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
               <Icon className="h-4 w-4" />
             </div>
           )}
-          <div className="min-w-0 pt-0.5">
+        <div className="min-w-0 pt-0.5">
             <p className={cn(
               "text-[11px] font-semibold tracking-wide uppercase truncate",
               widget.featured ? "text-primary" : "text-muted-foreground",
             )}>
               {widget.title}
             </p>
-            {widget.subtitle && (
+            {/* Only show subtitle in header for non-KPI widgets */}
+            {widget.subtitle && !isKpi && (
               <p className="text-[11px] text-muted-foreground truncate">{widget.subtitle}</p>
-            )}
-            {!widget.subtitle && (isKpi || isProgress) && def.description && (
-              <p className="text-[11px] text-muted-foreground/70 truncate">{def.description}</p>
             )}
           </div>
         </div>
@@ -146,6 +144,7 @@ function Body({
 
   if (visualization === "kpi") {
     const value = computeScalar(metric, inputs);
+    const subtitle = widget.subtitle || def.description;
     return (
       <div className="h-full flex flex-col justify-center">
         <p className={cn(
@@ -155,6 +154,9 @@ function Body({
         )}>
           {formatValue(value, format)}
         </p>
+        {subtitle && (
+          <p className="text-[11px] text-muted-foreground mt-2">{subtitle}</p>
+        )}
       </div>
     );
   }
