@@ -103,12 +103,22 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
               <Icon className="h-4 w-4" />
             </div>
           )}
-        <div className="min-w-0 pt-0.5">
+          <div className="min-w-0 pt-0.5">
             <p className={cn(
               "text-[11px] font-semibold tracking-wide uppercase truncate",
               widget.featured ? "text-primary" : "text-muted-foreground",
             )}>
               {widget.title}
+            </p>
+            {/* Data interval under title */}
+            <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+              {inputs.dateRange === "7d" ? "Last 7 days" :
+               inputs.dateRange === "30d" ? "Last 30 days" :
+               inputs.dateRange === "90d" ? "Last 90 days" :
+               inputs.dateRange === "thisMonth" ? "This month" :
+               inputs.dateRange === "lastMonth" ? "Last month" :
+               inputs.dateRange === "thisWeek" ? "This week" :
+               inputs.dateRange === "today" ? "Today" : inputs.dateRange}
             </p>
             {/* Only show subtitle in header for non-KPI widgets */}
             {widget.subtitle && !isKpi && (
