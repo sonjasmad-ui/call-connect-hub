@@ -11,6 +11,7 @@ export interface MetricInputs {
   endDate: string;
   bookingTarget: number;
   callTarget: number;
+  dateRange?: string;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
