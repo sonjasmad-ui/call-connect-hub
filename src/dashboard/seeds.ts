@@ -32,15 +32,19 @@ export function SEED_DASHBOARDS(): DashboardConfig[] {
     createdAt: now,
     updatedAt: now,
     widgets: [
-      makeWidget("w1", "totalCalls",   { x: 0, y: 0, w: 3, h: 3 }),
-      makeWidget("w2", "answeredCalls",{ x: 3, y: 0, w: 3, h: 3 }),
-      makeWidget("w3", "answerRate",   { x: 6, y: 0, w: 3, h: 3 }, { featured: true }),
-      makeWidget("w4", "bookings",     { x: 9, y: 0, w: 3, h: 3 }),
-      makeWidget("w5", "dailyCallsTrend", { x: 0, y: 3, w: 8, h: 5 }),
-      makeWidget("w6", "answeredVsMissed", { x: 8, y: 3, w: 4, h: 5 }, { visualization: "donut" }),
-      makeWidget("w7", "bookingTarget", { x: 0, y: 8, w: 6, h: 3 }, { visualization: "progress" }),
-      makeWidget("w8", "callTarget",    { x: 6, y: 8, w: 6, h: 3 }, { visualization: "progress" }),
-      makeWidget("w9", "recentCalls",   { x: 0, y: 11, w: 12, h: 6 }),
+      // Top row: 5 KPI cards
+      makeWidget("w1", "totalCalls",    { x: 0,  y: 0, w: 3, h: 3 }),
+      makeWidget("w2", "answeredCalls", { x: 3,  y: 0, w: 3, h: 3 }),
+      makeWidget("w3", "answerRate",    { x: 6,  y: 0, w: 3, h: 3 }, { featured: true }),
+      makeWidget("w4", "talkTime",      { x: 9,  y: 0, w: 3, h: 3 }),
+      // Targets row
+      makeWidget("w5", "bookingTarget", { x: 0,  y: 3, w: 6, h: 3 }, { visualization: "progress" }),
+      makeWidget("w6", "callTarget",    { x: 6,  y: 3, w: 6, h: 3 }, { visualization: "progress" }),
+      // Trends + breakdown
+      makeWidget("w7", "dailyCallsTrend",   { x: 0, y: 6, w: 8, h: 5 }),
+      makeWidget("w8", "answeredVsMissed",  { x: 8, y: 6, w: 4, h: 5 }, { visualization: "donut" }),
+      // Recent calls table
+      makeWidget("w9", "recentCalls",   { x: 0, y: 11, w: 12, h: 7 }),
     ],
   };
 

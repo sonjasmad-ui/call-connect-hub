@@ -101,4 +101,8 @@ export interface WidgetDefinition {
   defaultLayout: { w: number; h: number };
   /** Tags for search */
   tags?: string[];
+  /** Visual accent — references a stat-* token */
+  accent?: "blue" | "green" | "teal" | "orange" | "purple" | "rose";
+  /** Lucide icon name to render in the KPI header */
+  icon?: string;
 }
