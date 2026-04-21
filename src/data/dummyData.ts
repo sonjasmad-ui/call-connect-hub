@@ -8,6 +8,10 @@ export interface CallRecord {
   phone: string;
   recordingUrl?: string;
   notes?: string;
+  /** Enriched from Pipedrive contact lookup when available */
+  contactName?: string;
+  company?: string;
+  userName?: string;
 }
 
 export interface Meeting {
