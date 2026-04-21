@@ -111,7 +111,7 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
               {widget.title}
             </p>
             {/* Only show subtitle in header for non-KPI widgets */}
-            {widget.subtitle && visualization !== "kpi" && (
+            {widget.subtitle && !isKpi && (
               <p className="text-[11px] text-muted-foreground truncate">{widget.subtitle}</p>
             )}
           </div>
