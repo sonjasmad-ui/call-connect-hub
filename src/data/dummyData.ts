@@ -55,6 +55,17 @@ function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+const sampleContacts = [
+  { name: "John Doe",       company: "Acme Corp" },
+  { name: "Jane Smith",     company: "Stark Industries" },
+  { name: "Mike Johnson",   company: "Wayne Enterprises" },
+  { name: "Sara Wilson",    company: "Globex Corp" },
+  { name: "Lisa Chen",      company: "Initech" },
+  { name: "Erik Hansen",    company: "Nordisk Tech" },
+  { name: "Maria Berg",     company: "Bluewave AS" },
+  { name: "Tom Lindqvist",  company: "Skandia Soft" },
+];
+
 function generateCalls(): CallRecord[] {
   const calls: CallRecord[] = [];
   const startDate = new Date("2026-03-02");
@@ -69,6 +80,7 @@ function generateCalls(): CallRecord[] {
       const status = randomFrom(statuses);
       const answered = status === "answered";
       const duration = answered ? 15 + Math.floor(Math.random() * 480) : Math.floor(Math.random() * 10);
+      const contact = Math.random() > 0.25 ? randomFrom(sampleContacts) : null;
 
       calls.push({
         id: `call-${d.toISOString().slice(0, 10)}-${i}`,
@@ -79,7 +91,9 @@ function generateCalls(): CallRecord[] {
         status,
         phone: randomFrom(phones),
         recordingUrl: answered ? `https://recordings.telavox.example/rec-${Date.now()}-${i}` : undefined,
-        notes: Math.random() > 0.7 ? "Interested in demo" : undefined,
+        notes: Math.random() > 0.7 ? "Interested in demo. Wants follow-up next week." : undefined,
+        contactName: contact?.name,
+        company: contact?.company,
       });
     }
   }
