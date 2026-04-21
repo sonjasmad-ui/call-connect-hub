@@ -144,6 +144,7 @@ export default function Index() {
             onLayoutsChange={setLayouts}
             onEditWidget={setEditingWidget}
             onRemoveWidget={removeWidget}
+            onUpdateWidget={updateWidget}
           />
         </div>
       </main>

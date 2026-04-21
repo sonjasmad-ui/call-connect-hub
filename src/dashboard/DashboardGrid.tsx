@@ -77,7 +77,7 @@ export function DashboardGrid({
         {dashboard.widgets.map(widget => (
           <div key={widget.id} className="group">
             <div className="relative h-full w-full">
-              <WidgetRenderer widget={widget} inputs={inputs} compact={widget.layout.h <= 3} />
+              <WidgetRenderer widget={widget} inputs={inputs} compact={widget.layout.h <= 3} onUpdateWidget={onUpdateWidget} />
               {editMode && !isMobile && (
                 <div className="widget-control absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                   <button
