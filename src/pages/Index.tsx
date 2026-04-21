@@ -47,7 +47,8 @@ export default function Index() {
     endDate: filters.endDate,
     bookingTarget,
     callTarget,
-  }), [filteredCalls, meetings, filters.startDate, filters.endDate, bookingTarget, callTarget]);
+    dateRange: filters.datePreset,
+  }), [filteredCalls, meetings, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset]);
 
   const handleLock = () => {
     sessionStorage.removeItem("dashboard_access");
