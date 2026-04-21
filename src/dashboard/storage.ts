@@ -1,8 +1,8 @@
 import type { DashboardConfig } from "./types";
 import { SEED_DASHBOARDS } from "./seeds";
 
-const STORAGE_KEY = "calltrack:dashboards:v1";
-const ACTIVE_KEY = "calltrack:active-dashboard:v1";
+const STORAGE_KEY = "calltrack:dashboards:v2";
+const ACTIVE_KEY = "calltrack:active-dashboard:v2";
 
 /**
  * Persistence layer for dashboards. Currently localStorage-backed but the
