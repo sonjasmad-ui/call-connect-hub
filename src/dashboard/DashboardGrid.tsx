@@ -15,10 +15,11 @@ interface DashboardGridProps {
   onLayoutsChange: (items: Array<{ id: string; x: number; y: number; w: number; h: number }>) => void;
   onEditWidget: (widget: WidgetConfig) => void;
   onRemoveWidget: (id: string) => void;
+  onUpdateWidget: (widget: WidgetConfig) => void;
 }
 
 export function DashboardGrid({
-  dashboard, inputs, editMode, onLayoutsChange, onEditWidget, onRemoveWidget,
+  dashboard, inputs, editMode, onLayoutsChange, onEditWidget, onRemoveWidget, onUpdateWidget,
 }: DashboardGridProps) {
   const [isMobile, setIsMobile] = useState(false);
 
