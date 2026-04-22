@@ -70,9 +70,10 @@ interface WidgetRendererProps {
   inputs: MetricInputs;
   compact?: boolean;
   onUpdateWidget?: (w: WidgetConfig) => void;
+  onOpenBookings?: () => void;
 }
 
-export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: WidgetRendererProps) {
+export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpenBookings }: WidgetRendererProps) {
   const def = getWidgetDefinition(widget.metric);
   const accent = def.accent ?? "blue";
   const accentVar = ACCENT_HSL[accent];
@@ -82,23 +83,48 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
 
   const showHeaderIcon = (isKpi || isProgress) && Icon;
 
+  // Bookings KPI is click-through to a list of booked companies
+  const isBookingsClickable =
+    !!onOpenBookings &&
+    (widget.metric === "bookings" || widget.metric === "bookingTarget");
+
   return (
     <Card
       className={cn(
-        "h-full w-full overflow-hidden flex flex-col glass-card transition-shadow",
-        widget.featured && "ring-1 ring-primary/40 shadow-[0_8px_32px_-8px_hsl(var(--primary)/0.35)]",
+        "h-full w-full overflow-hidden flex flex-col transition-shadow relative",
+        widget.featured
+          ? "border-0 shadow-[0_8px_32px_-8px_hsl(var(--primary)/0.45)] text-primary-foreground"
+          : "glass-card",
       )}
+      style={
+        widget.featured
+          ? {
+              background: `linear-gradient(135deg, hsl(${accentVar}) 0%, hsl(${accentVar} / 0.78) 60%, hsl(var(--gradient-end) / 0.85) 100%)`,
+            }
+          : undefined
+      }
     >
+      {/* subtle decorative orb for featured */}
+      {widget.featured && (
+        <div
+          className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full opacity-25 blur-2xl"
+          style={{ background: "hsl(var(--primary-foreground))" }}
+        />
+      )}
+
       {/* Header */}
-      <div className="px-3 sm:px-4 pt-3 pb-1.5 flex items-start justify-between gap-2 shrink-0">
+      <div className="px-3 sm:px-4 pt-3 pb-1.5 flex items-start justify-between gap-2 shrink-0 relative">
         <div className="flex items-start gap-2.5 min-w-0">
           {showHeaderIcon && (
             <div
-              className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{
-                background: `hsl(${accentVar} / 0.12)`,
-                color: `hsl(${accentVar})`,
-              }}
+              className={cn(
+                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+              )}
+              style={
+                widget.featured
+                  ? { background: "hsl(var(--primary-foreground) / 0.18)", color: "hsl(var(--primary-foreground))" }
+                  : { background: `hsl(${accentVar} / 0.12)`, color: `hsl(${accentVar})` }
+              }
             >
               <Icon className="h-4 w-4" />
             </div>
@@ -106,12 +132,15 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
           <div className="min-w-0 pt-0.5">
             <p className={cn(
               "text-[11px] font-semibold tracking-wide uppercase truncate",
-              widget.featured ? "text-primary" : "text-muted-foreground",
+              widget.featured ? "text-primary-foreground/90" : "text-muted-foreground",
             )}>
               {widget.title}
             </p>
             {/* Data interval under title */}
-            <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+            <p className={cn(
+              "text-[10px] truncate mt-0.5",
+              widget.featured ? "text-primary-foreground/70" : "text-muted-foreground/70",
+            )}>
               {inputs.dateRange === "last7" ? "Last 7 days" :
                inputs.dateRange === "last30" ? "Last 30 days" :
                inputs.dateRange === "last90" ? "Last 90 days" :
@@ -122,23 +151,27 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget }: Widg
             </p>
             {/* Only show subtitle in header for non-KPI widgets */}
             {widget.subtitle && !isKpi && (
-              <p className="text-[11px] text-muted-foreground truncate">{widget.subtitle}</p>
+              <p className={cn(
+                "text-[11px] truncate",
+                widget.featured ? "text-primary-foreground/80" : "text-muted-foreground",
+              )}>{widget.subtitle}</p>
             )}
           </div>
         </div>
         {widget.featured && (
-          <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-1" />
+          <Sparkles className="h-3.5 w-3.5 text-primary-foreground/90 shrink-0 mt-1" />
         )}
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 px-3 sm:px-4 pb-3 sm:pb-4">
+      <div className="flex-1 min-h-0 px-3 sm:px-4 pb-3 sm:pb-4 relative">
         <Body
           widget={widget}
           inputs={inputs}
           compact={compact}
           accentVar={accentVar}
           onUpdateWidget={onUpdateWidget}
+          onOpenBookings={isBookingsClickable ? onOpenBookings : undefined}
         />
       </div>
     </Card>
