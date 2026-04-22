@@ -146,6 +146,7 @@ export default function Index() {
             onEditWidget={setEditingWidget}
             onRemoveWidget={removeWidget}
             onUpdateWidget={updateWidget}
+            onOpenBookings={() => setBookingsOpen(true)}
           />
         </div>
       </main>
@@ -162,6 +163,14 @@ export default function Index() {
         onSave={updateWidget}
         onDelete={removeWidget}
         onSetFeatured={setFeatured}
+      />
+
+      <BookingsListDialog
+        open={bookingsOpen}
+        onClose={() => setBookingsOpen(false)}
+        meetings={meetings}
+        startDate={filters.startDate}
+        endDate={filters.endDate}
       />
     </div>
   );
