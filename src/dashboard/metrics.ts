@@ -12,6 +12,10 @@ export interface MetricInputs {
   bookingTarget: number;
   callTarget: number;
   dateRange?: string;
+  /** Founding-AE: target pipeline value for "Pipeline Coverage" widget */
+  pipelineQuota?: number;
+  /** Founding-AE: assumed avg deal value when Pipedrive doesn't expose deal_value */
+  avgDealValue?: number;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -42,6 +46,24 @@ export function computeScalar(metric: string, input: MetricInputs): number {
     case "callsPerBooking":return bookingsInPeriod > 0 ? total / bookingsInPeriod : 0;
     case "bookingTarget":  return bookingsInPeriod;
     case "callTarget":     return total;
+    case "activityPerDay": {
+      const days = new Set<string>();
+      calls.forEach(c => days.add(c.date));
+      meetings.forEach(m => days.add(m.createdDate || m.date));
+      const activeDays = days.size || 1;
+      return (total + bookingsInPeriod) / activeDays;
+    }
+    case "pipelineCoverage": {
+      const quota = input.pipelineQuota ?? 1_000_000;
+      const avgDeal = input.avgDealValue ?? 50_000;
+      const pipelineValue = meetings
+        .filter(m => {
+          const d = m.createdDate || m.date;
+          return d >= startDate && d <= endDate;
+        })
+        .reduce((sum, m) => sum + (m.dealValue || avgDeal), 0);
+      return quota > 0 ? (pipelineValue / quota) * 100 : 0;
+    }
     case "activeCallingHours": {
       const set = new Set<string>();
       calls.forEach(c => set.add(`${c.date}-${c.time.split(":")[0]}`));

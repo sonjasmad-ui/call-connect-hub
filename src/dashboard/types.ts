@@ -36,6 +36,8 @@ export type MetricKey =
   | "bookingRate"
   | "bookingTarget"
   | "callTarget"
+  | "activityPerDay"
+  | "pipelineCoverage"
   // Trend metrics
   | "dailyCallsTrend"
   | "dailyTalkTimeTrend"

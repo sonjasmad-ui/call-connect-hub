@@ -103,6 +103,20 @@ export const WIDGET_REGISTRY: Record<MetricKey, WidgetDefinition> = {
     defaultFormat: "integer", defaultLayout: { w: 6, h: 3 },
     tags: ["target", "goal"], accent: "blue", icon: "Flag",
   },
+  activityPerDay: {
+    metric: "activityPerDay", category: "kpi",
+    title: "Activity / Day", description: "Calls + meetings",
+    supportedVisualizations: ["kpi"],
+    defaultFormat: "decimal", defaultLayout: { w: 3, h: 3 },
+    tags: ["activity", "ae", "rhythm"], accent: "orange", icon: "Activity",
+  },
+  pipelineCoverage: {
+    metric: "pipelineCoverage", category: "booking",
+    title: "Pipeline Coverage", description: "Pipeline ÷ quota",
+    supportedVisualizations: ["kpi", "progress"],
+    defaultFormat: "percent", defaultLayout: { w: 3, h: 3 },
+    tags: ["ae", "pipeline", "quota"], accent: "teal", icon: "TrendingUp",
+  },
 
   // ---------- Trends ----------
   dailyCallsTrend: {
