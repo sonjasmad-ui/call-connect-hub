@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { SettingsDialog } from "@/components/dashboard/SettingsDialog";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
+import { BookingsListDialog } from "@/components/dashboard/BookingsListDialog";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { defaultFilters, type DashboardFilters } from "@/data/dummyData";
 import { useDashboards } from "@/dashboard/useDashboards";
@@ -24,6 +25,7 @@ export default function Index() {
   const [editMode, setEditMode] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
+  const [bookingsOpen, setBookingsOpen] = useState(false);
   const navigate = useNavigate();
 
   const {
