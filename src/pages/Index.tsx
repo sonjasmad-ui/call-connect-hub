@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { SettingsDialog } from "@/components/dashboard/SettingsDialog";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
+import { BookingsListDialog } from "@/components/dashboard/BookingsListDialog";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { defaultFilters, type DashboardFilters } from "@/data/dummyData";
 import { useDashboards } from "@/dashboard/useDashboards";
@@ -24,6 +25,7 @@ export default function Index() {
   const [editMode, setEditMode] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
+  const [bookingsOpen, setBookingsOpen] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -146,6 +148,7 @@ export default function Index() {
             onEditWidget={setEditingWidget}
             onRemoveWidget={removeWidget}
             onUpdateWidget={updateWidget}
+            onOpenBookings={() => setBookingsOpen(true)}
           />
         </div>
       </main>
@@ -162,6 +165,14 @@ export default function Index() {
         onSave={updateWidget}
         onDelete={removeWidget}
         onSetFeatured={setFeatured}
+      />
+
+      <BookingsListDialog
+        open={bookingsOpen}
+        onClose={() => setBookingsOpen(false)}
+        meetings={meetings}
+        startDate={filters.startDate}
+        endDate={filters.endDate}
       />
     </div>
   );
