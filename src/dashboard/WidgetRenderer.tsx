@@ -179,7 +179,7 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
 }
 
 function Body({
-  widget, inputs, compact, accentVar, onUpdateWidget,
+  widget, inputs, compact, accentVar, onUpdateWidget, onOpenBookings,
 }: WidgetRendererProps & { accentVar: string }) {
   const { visualization, metric, format } = widget;
   const def = getWidgetDefinition(metric);
@@ -188,18 +188,47 @@ function Body({
   if (visualization === "kpi") {
     const value = computeScalar(metric, inputs);
     const subtitle = widget.subtitle || def.description;
-    return (
-      <div className="h-full flex flex-col justify-center">
+    const clickable = !!onOpenBookings;
+    const content = (
+      <>
         <p className={cn(
-          "font-bold leading-none text-foreground",
+          "font-bold leading-none",
           compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl",
-          widget.featured && "gradient-text",
+          widget.featured ? "text-primary-foreground" : "text-foreground",
+          widget.featured && "drop-shadow-sm",
         )}>
           {formatValue(value, format)}
         </p>
         {subtitle && (
-          <p className="text-[11px] text-muted-foreground mt-2">{subtitle}</p>
+          <p className={cn(
+            "text-[11px] mt-2",
+            widget.featured ? "text-primary-foreground/80" : "text-muted-foreground",
+          )}>{subtitle}</p>
         )}
+        {clickable && (
+          <p className={cn(
+            "text-[10px] mt-1 underline-offset-2 hover:underline",
+            widget.featured ? "text-primary-foreground/80" : "text-primary",
+          )}>
+            View companies →
+          </p>
+        )}
+      </>
+    );
+    if (clickable) {
+      return (
+        <button
+          type="button"
+          onClick={onOpenBookings}
+          className="widget-control h-full w-full flex flex-col justify-center text-left rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          {content}
+        </button>
+      );
+    }
+    return (
+      <div className="h-full flex flex-col justify-center">
+        {content}
       </div>
     );
   }
