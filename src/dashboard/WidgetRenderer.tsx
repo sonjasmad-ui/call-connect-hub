@@ -168,7 +168,10 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 px-3 sm:px-4 pb-3 sm:pb-4 relative">
+      <div className={cn(
+        "flex-1 min-h-0 px-3 sm:px-4 relative",
+        isKpi || isProgress ? "pb-2.5 sm:pb-3 pt-0.5" : "pb-3 sm:pb-4",
+      )}>
         <Body
           widget={widget}
           inputs={inputs}
