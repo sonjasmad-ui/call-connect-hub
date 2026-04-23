@@ -200,7 +200,7 @@ function Body({
       <>
         <p className={cn(
           "font-bold leading-none",
-          compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl",
+          compact ? "text-2xl sm:text-[28px]" : "text-3xl sm:text-[34px]",
           widget.featured ? "text-primary-foreground" : "text-foreground",
           widget.featured && "drop-shadow-sm",
         )}>
@@ -208,13 +208,13 @@ function Body({
         </p>
         {subtitle && (
           <p className={cn(
-            "text-[11px] mt-2",
+            "text-[11px] mt-1 leading-snug",
             widget.featured ? "text-primary-foreground/80" : "text-muted-foreground",
           )}>{subtitle}</p>
         )}
         {clickable && (
           <p className={cn(
-            "text-[10px] mt-1 underline-offset-2 hover:underline",
+            "text-[10px] mt-0.5 underline-offset-2 hover:underline",
             widget.featured ? "text-primary-foreground/80" : "text-primary",
           )}>
             View companies →
@@ -227,14 +227,14 @@ function Body({
         <button
           type="button"
           onClick={onOpenBookings}
-          className="widget-control h-full w-full flex flex-col justify-center text-left rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="widget-control h-full w-full flex flex-col justify-start text-left rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           {content}
         </button>
       );
     }
     return (
-      <div className="h-full flex flex-col justify-center">
+      <div className="h-full flex flex-col justify-start">
         {content}
       </div>
     );
