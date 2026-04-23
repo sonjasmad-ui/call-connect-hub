@@ -113,12 +113,16 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
       )}
 
       {/* Header */}
-      <div className="px-3 sm:px-4 pt-3 pb-1.5 flex items-start justify-between gap-2 shrink-0 relative">
-        <div className="flex items-start gap-2.5 min-w-0">
+      <div className={cn(
+        "flex items-start justify-between gap-2 shrink-0 relative",
+        isKpi || isProgress ? "px-3 sm:px-4 pt-2 pb-0.5" : "px-3 sm:px-4 pt-3 pb-1.5",
+      )}>
+        <div className="flex items-center gap-2 min-w-0">
           {showHeaderIcon && (
             <div
               className={cn(
-                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                "rounded-md flex items-center justify-center shrink-0",
+                isKpi || isProgress ? "h-6 w-6" : "h-8 w-8",
               )}
               style={
                 widget.featured
@@ -126,10 +130,10 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
                   : { background: `hsl(${accentVar} / 0.12)`, color: `hsl(${accentVar})` }
               }
             >
-              <Icon className="h-4 w-4" />
+              <Icon className={cn(isKpi || isProgress ? "h-3.5 w-3.5" : "h-4 w-4")} />
             </div>
           )}
-          <div className="min-w-0 pt-0.5">
+          <div className="min-w-0">
             <p className={cn(
               "text-[11px] font-semibold tracking-wide uppercase truncate",
               widget.featured ? "text-primary-foreground/90" : "text-muted-foreground",
