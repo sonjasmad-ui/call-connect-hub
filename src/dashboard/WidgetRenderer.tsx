@@ -113,12 +113,16 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
       )}
 
       {/* Header */}
-      <div className="px-3 sm:px-4 pt-3 pb-1.5 flex items-start justify-between gap-2 shrink-0 relative">
-        <div className="flex items-start gap-2.5 min-w-0">
+      <div className={cn(
+        "flex items-start justify-between gap-2 shrink-0 relative",
+        isKpi || isProgress ? "px-3 sm:px-4 pt-2 pb-0.5" : "px-3 sm:px-4 pt-3 pb-1.5",
+      )}>
+        <div className="flex items-center gap-2 min-w-0">
           {showHeaderIcon && (
             <div
               className={cn(
-                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                "rounded-md flex items-center justify-center shrink-0",
+                isKpi || isProgress ? "h-6 w-6" : "h-8 w-8",
               )}
               style={
                 widget.featured
@@ -126,10 +130,10 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
                   : { background: `hsl(${accentVar} / 0.12)`, color: `hsl(${accentVar})` }
               }
             >
-              <Icon className="h-4 w-4" />
+              <Icon className={cn(isKpi || isProgress ? "h-3.5 w-3.5" : "h-4 w-4")} />
             </div>
           )}
-          <div className="min-w-0 pt-0.5">
+          <div className="min-w-0">
             <p className={cn(
               "text-[11px] font-semibold tracking-wide uppercase truncate",
               widget.featured ? "text-primary-foreground/90" : "text-muted-foreground",
@@ -164,7 +168,10 @@ export function WidgetRenderer({ widget, inputs, compact, onUpdateWidget, onOpen
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 px-3 sm:px-4 pb-3 sm:pb-4 relative">
+      <div className={cn(
+        "flex-1 min-h-0 px-3 sm:px-4 relative",
+        isKpi || isProgress ? "pb-2.5 sm:pb-3 pt-0.5" : "pb-3 sm:pb-4",
+      )}>
         <Body
           widget={widget}
           inputs={inputs}
@@ -193,7 +200,7 @@ function Body({
       <>
         <p className={cn(
           "font-bold leading-none",
-          compact ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl",
+          compact ? "text-2xl sm:text-[28px]" : "text-3xl sm:text-[34px]",
           widget.featured ? "text-primary-foreground" : "text-foreground",
           widget.featured && "drop-shadow-sm",
         )}>
@@ -201,13 +208,13 @@ function Body({
         </p>
         {subtitle && (
           <p className={cn(
-            "text-[11px] mt-2",
+            "text-[11px] mt-1 leading-snug",
             widget.featured ? "text-primary-foreground/80" : "text-muted-foreground",
           )}>{subtitle}</p>
         )}
         {clickable && (
           <p className={cn(
-            "text-[10px] mt-1 underline-offset-2 hover:underline",
+            "text-[10px] mt-0.5 underline-offset-2 hover:underline",
             widget.featured ? "text-primary-foreground/80" : "text-primary",
           )}>
             View companies →
@@ -220,14 +227,14 @@ function Body({
         <button
           type="button"
           onClick={onOpenBookings}
-          className="widget-control h-full w-full flex flex-col justify-center text-left rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="widget-control h-full w-full flex flex-col justify-start text-left rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           {content}
         </button>
       );
     }
     return (
-      <div className="h-full flex flex-col justify-center">
+      <div className="h-full flex flex-col justify-start">
         {content}
       </div>
     );
