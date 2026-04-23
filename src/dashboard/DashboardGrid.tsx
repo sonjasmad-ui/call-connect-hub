@@ -38,9 +38,18 @@ export function DashboardGrid({
     const sorted = [...dashboard.widgets].sort((a, b) =>
       a.layout.y === b.layout.y ? a.layout.x - b.layout.x : a.layout.y - b.layout.y,
     );
-    const xs: Layout[] = sorted.map((w, idx) => ({
-      i: w.id, x: 0, y: idx * 4, w: 4, h: Math.max(3, Math.min(w.layout.h, 5)), static: true,
-    }));
+    // Mobile-first: content-aware heights so KPIs are slim, charts/tables get more room.
+    let cursorY = 0;
+    const xs: Layout[] = sorted.map(w => {
+      const v = w.visualization;
+      const h =
+        v === "kpi" || v === "progress" ? 2 :
+        v === "table" ? 6 :
+        v === "donut" ? 5 : 4;
+      const item: Layout = { i: w.id, x: 0, y: cursorY, w: 4, h, static: true };
+      cursorY += h;
+      return item;
+    });
     return { lg, md: lg, sm: lg, xs, xxs: xs };
   }, [dashboard.widgets]);
 
@@ -65,8 +74,8 @@ export function DashboardGrid({
         layouts={layouts}
         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
         cols={{ lg: 12, md: 12, sm: 12, xs: 4, xxs: 4 }}
-        rowHeight={60}
-        margin={[16, 16]}
+        rowHeight={isMobile ? 44 : 60}
+        margin={isMobile ? [8, 8] : [16, 16]}
         containerPadding={[0, 0]}
         isDraggable={editMode && !isMobile}
         isResizable={editMode && !isMobile}
