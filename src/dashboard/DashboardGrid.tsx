@@ -38,9 +38,18 @@ export function DashboardGrid({
     const sorted = [...dashboard.widgets].sort((a, b) =>
       a.layout.y === b.layout.y ? a.layout.x - b.layout.x : a.layout.y - b.layout.y,
     );
-    const xs: Layout[] = sorted.map((w, idx) => ({
-      i: w.id, x: 0, y: idx * 4, w: 4, h: Math.max(3, Math.min(w.layout.h, 5)), static: true,
-    }));
+    // Mobile-first: content-aware heights so KPIs are slim, charts/tables get more room.
+    let cursorY = 0;
+    const xs: Layout[] = sorted.map(w => {
+      const v = w.visualization;
+      const h =
+        v === "kpi" || v === "progress" ? 2 :
+        v === "table" ? 6 :
+        v === "donut" ? 5 : 4;
+      const item: Layout = { i: w.id, x: 0, y: cursorY, w: 4, h, static: true };
+      cursorY += h;
+      return item;
+    });
     return { lg, md: lg, sm: lg, xs, xxs: xs };
   }, [dashboard.widgets]);
 
