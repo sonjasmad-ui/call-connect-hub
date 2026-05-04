@@ -1,42 +1,40 @@
-## Short answer
+# Fix Pipedrive "non-2xx status code" Error
 
-You don't need a Telavox webhook. The dashboard pulls call history on demand, so it needs a **REST API token** (Bearer token), not a webhook. Webhooks push events to us — useful for real-time, but the current architecture polls `GET /calls`, which requires an API token.
+## Root cause analysis
 
-The Telavox REST API exists but it's **not self-serve** in the normal admin UI. That's why you only see "Webhooks" — the API token is provisioned by Telavox.
+The `pipedrive-activities` edge function forwards Pipedrive's HTTP status (e.g. 400/401/404) directly back to the client. The client's `invokeFunction` wrapper just shows "Edge Function returned a non-2xx status code" without the underlying `detail`, so we can't tell which of these is happening:
 
-## How to get a Telavox API token
+1. **Bad base URL** — Settings still has the placeholder `https://your-company.pipedrive.com/api/v1` (DNS failure or 404).
+2. **Wrong activity type key** — `type=meeting` works for most accounts, but custom Pipedrive setups use different keys (`call`, `task`, custom). Invalid type → 400.
+3. **Token scope / expired** — 401/403.
+4. **API v1 quirks** — `start_date`/`end_date` filters require both to be set, and some accounts now require v2.
 
-You have three realistic paths. Pick one:
+## What I'll change
 
-### Option A — Request an API token from Telavox (recommended)
-1. Email `support@telavox.com` (or your account manager) and ask for **REST API access** for your account.
-2. Tell them you need the scopes: **read calls, read recordings, read extensions/users**.
-3. They will issue a **Bearer token** tied to your tenant. Base URL is `https://api.telavox.se`.
-4. Paste the token into the dashboard's Settings dialog (Telavox API key field). Done.
+### 1. Surface the real error to the UI
+In `src/lib/api.ts` `invokeFunction`, when the function returns an error payload (which it does — with `error` + `detail` fields), throw a message that includes both. Right now `error.message` from `supabase.functions.invoke` is just the generic non-2xx string; the actual JSON body is in `data`.
 
-This is what the current code expects (`Authorization: Bearer <token>` against `https://api.telavox.se/calls`, `/extensions/`).
+Fix: read `data.error` and `data.detail` from the response and throw a combined message so the toast actually tells the user what Pipedrive said.
 
-### Option B — Per-user Basic Auth (works today without contacting support)
-Telavox also accepts a personal login (`Authorization: Basic base64(email:password)`) on the same endpoints. Each user only sees their own calls — fine for a single-AE setup, not great for a team dashboard.
+### 2. Make `pipedrive-activities` more robust
+- Default base URL: use `https://api.pipedrive.com/api/v1` (works with API token for all accounts) instead of relying on company subdomain.
+- Drop the `type=meeting` filter when no meetings come back, OR make it configurable. Safer: don't filter by `type` server-side — fetch all activities and let client filter. This also lets us show calls/tasks if user wants.
+- Always log the outgoing URL (with token redacted) and Pipedrive's response body to edge function logs so future debugging is easy.
+- If `start_date` or `end_date` is missing, omit both (Pipedrive returns 400 if only one is set).
 
-If you want this, I can add a small toggle in Settings: "Auth type → Bearer token / Basic (email + password)" and adjust the edge function accordingly.
+### 3. Same hardening for `pipedrive-users`
+Log outgoing call + response on error.
 
-### Option C — Switch to webhooks (different architecture)
-If Telavox refuses to issue an API token, we go event-driven instead of polling:
-- Create a `telavox-webhook` edge function that receives call events.
-- Store calls in a `calls` table in Lovable Cloud.
-- Dashboard reads from the table instead of calling Telavox live.
+### 4. Settings dialog: validate base URL
+- If the Pipedrive base URL field is empty, that's fine — function defaults to `https://api.pipedrive.com/api/v1`.
+- If it still contains `your-company`, show a warning on save and clear it (use default).
+- Update placeholder text to clarify: "Leave empty to use https://api.pipedrive.com/api/v1".
 
-This is more work (new table + RLS + webhook handler + backfill story) and you lose historical data before the webhook was set up. Only worth it if Option A is blocked.
+## Files to edit
+- `supabase/functions/pipedrive-activities/index.ts` — better defaults, logging, no required type filter
+- `supabase/functions/pipedrive-users/index.ts` — better logging
+- `src/lib/api.ts` — surface `data.error`/`data.detail` from edge function responses
+- `src/components/dashboard/SettingsDialog.tsx` — placeholder hint + validation
 
-## My recommendation
-
-Go with **Option A**. Email Telavox support today; meanwhile keep using dummy data. If they're slow, I'll add Option B (Basic auth toggle) as a fallback so you can demo with your own account.
-
-## What I'll do once you decide
-
-- **If A**: nothing to change in code — paste the token in Settings and it works.
-- **If B**: add an "Auth type" selector in `SettingsDialog.tsx`, update `telavox-calls` and `telavox-users` edge functions to support `Basic` auth, redeploy.
-- **If C**: create `telavox-webhook` function + `calls` table + migration + swap `useDashboardData` to read from the DB.
-
-Tell me which option (A, B, or C) and I'll proceed.
+## After the fix
+You'll see the real Pipedrive error in the toast (e.g. "Pipedrive API error [401]: invalid api token" or "[400]: invalid activity type"). Tell me what it says and we can fix it in one more pass — most likely it's just the base URL placeholder still being saved.
