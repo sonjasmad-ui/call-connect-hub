@@ -1,13 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
+function normalizeBase(input?: string): string {
+  let b = (input || "").trim();
+  if (!b || b.includes("your-company")) return "https://api.pipedrive.com/api/v1";
+  b = b.replace(/\/+$/, "");
+  if (!/\/api\/v\d+$/.test(b)) b += "/api/v1";
+  return b;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { apiToken, baseUrl, startDate, endDate, userId, type = "meeting" } = await req.json();
+    const { apiToken, baseUrl, startDate, endDate, userId, type } = await req.json();
 
     if (!apiToken) {
       return new Response(JSON.stringify({ error: "Pipedrive API token is required" }), {
@@ -16,29 +24,54 @@ serve(async (req) => {
       });
     }
 
-    const base = baseUrl || "https://api.pipedrive.com/api/v1";
+    const base = normalizeBase(baseUrl);
 
     const url = new URL(`${base}/activities`);
     url.searchParams.set("api_token", apiToken);
-    url.searchParams.set("type", type);
-    if (startDate) url.searchParams.set("start_date", startDate);
-    if (endDate) url.searchParams.set("end_date", endDate);
+    // Only filter by type if explicitly provided — Pipedrive activity keys vary per account.
+    if (type) url.searchParams.set("type", type);
+    // Pipedrive requires both start_date and end_date together, otherwise 400.
+    if (startDate && endDate) {
+      url.searchParams.set("start_date", startDate);
+      url.searchParams.set("end_date", endDate);
+    }
     if (userId) url.searchParams.set("user_id", String(userId));
     url.searchParams.set("limit", "500");
 
+    const safeUrl = url.toString().replace(apiToken, "***");
+    console.log("pipedrive-activities → GET", safeUrl);
+
     const response = await fetch(url.toString());
+    const rawBody = await response.text();
 
     if (!response.ok) {
-      const body = await response.text();
-      return new Response(JSON.stringify({ error: `Pipedrive API error [${response.status}]`, detail: body }), {
-        status: response.status,
+      console.error("pipedrive-activities ← non-OK", response.status, rawBody.slice(0, 500));
+      let detail: any = rawBody;
+      try { detail = JSON.parse(rawBody); } catch {}
+      const apiMsg = (detail && (detail.error || detail.message)) || rawBody.slice(0, 200);
+      return new Response(JSON.stringify({
+        error: `Pipedrive API error [${response.status}]`,
+        detail: apiMsg,
+      }), {
+        status: 200, // return 200 so client invoke() resolves and we can read JSON cleanly
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
+    let data: any;
+    try { data = JSON.parse(rawBody); } catch {
+      return new Response(JSON.stringify({ error: "Pipedrive returned non-JSON response", detail: rawBody.slice(0, 200) }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const meetings = (data.data || []).map((a: any) => ({
+    const allActivities = data.data || [];
+    // Client-side filter to meetings (default) unless caller passed a different type.
+    const wanted = type || "meeting";
+    const filtered = allActivities.filter((a: any) => !type ? a.type === wanted : true);
+
+    const meetings = filtered.map((a: any) => ({
       id: String(a.id),
       title: a.subject || "Meeting",
       contactName: a.person_name || "Unknown",
@@ -50,15 +83,16 @@ serve(async (req) => {
       dealValue: a.deal_id || undefined,
       done: a.done === 1,
       userId: a.user_id,
+      type: a.type,
     }));
 
-    return new Response(JSON.stringify({ meetings, total: data.additional_data?.pagination?.total || meetings.length }), {
+    return new Response(JSON.stringify({ meetings, total: meetings.length, fetched: allActivities.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("pipedrive-activities error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
