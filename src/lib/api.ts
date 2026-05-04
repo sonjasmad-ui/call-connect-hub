@@ -27,8 +27,27 @@ export function hasPipedriveConfig(): boolean {
 
 async function invokeFunction(name: string, body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke(name, { body });
-  if (error) throw new Error(error.message || `Edge function ${name} failed`);
-  if (data?.error) throw new Error(data.error);
+  // Surface the function's JSON error body even when the HTTP status is non-2xx.
+  if (data?.error) {
+    const detail = data.detail ? ` — ${typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)}` : "";
+    throw new Error(`${data.error}${detail}`);
+  }
+  if (error) {
+    // FunctionsHttpError on supabase-js exposes the response on `context`.
+    const ctx: any = (error as any).context;
+    if (ctx?.json) {
+      try {
+        const body = await ctx.json();
+        if (body?.error) {
+          const detail = body.detail ? ` — ${typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail)}` : "";
+          throw new Error(`${body.error}${detail}`);
+        }
+      } catch (e: any) {
+        if (e?.message) throw e;
+      }
+    }
+    throw new Error(error.message || `Edge function ${name} failed`);
+  }
   return data;
 }
 

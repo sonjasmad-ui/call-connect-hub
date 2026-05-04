@@ -48,13 +48,19 @@ export function SettingsDialog({ onSettingsSaved }: SettingsDialogProps) {
   }, [open]);
 
   const handleSave = () => {
+    let pdUrl = pipedriveUrl.trim();
+    if (pdUrl.includes("your-company")) {
+      toast.warning("Pipedrive base URL still had the placeholder — using api.pipedrive.com instead.");
+      pdUrl = "";
+    }
     const settings: ApiSettings = {
       telavox_api_key: telavoxKey.trim(),
       telavox_base_url: telavoxUrl.trim(),
       pipedrive_api_token: pipedriveToken.trim(),
-      pipedrive_base_url: pipedriveUrl.trim(),
+      pipedrive_base_url: pdUrl,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    setPipedriveUrl(pdUrl);
     toast.success("API settings saved!");
     setOpen(false);
     onSettingsSaved?.();
@@ -104,8 +110,8 @@ export function SettingsDialog({ onSettingsSaved }: SettingsDialogProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pipedrive-url" className="text-xs text-muted-foreground">Base URL</Label>
-              <Input id="pipedrive-url" value={pipedriveUrl} onChange={e => setPipedriveUrl(e.target.value)} placeholder="https://your-company.pipedrive.com/api/v1" className="text-sm" />
+              <Label htmlFor="pipedrive-url" className="text-xs text-muted-foreground">Base URL (optional)</Label>
+              <Input id="pipedrive-url" value={pipedriveUrl} onChange={e => setPipedriveUrl(e.target.value)} placeholder="Leave empty to use https://api.pipedrive.com/api/v1" className="text-sm" />
             </div>
           </div>
 
