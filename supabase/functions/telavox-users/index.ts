@@ -1,40 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
+function normalizeBase(input?: string): string {
+  let b = (input || "").trim();
+  if (!b) return "https://api.telavox.se";
+  b = b.replace(/\/+$/, "").replace(/\/v\d+$/, "");
+  return b;
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { apiKey, baseUrl } = await req.json();
+    const { apiKey: bodyKey, baseUrl } = await req.json().catch(() => ({}));
+    const apiKey = (bodyKey && String(bodyKey).trim()) || Deno.env.get("TELAVOX_API_KEY") || "";
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Telavox API key is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Telavox API key not configured" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const base = baseUrl || "https://api.telavox.se";
+    const base = normalizeBase(baseUrl);
     const response = await fetch(`${base}/extensions/`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     });
+    const rawBody = await response.text();
 
     if (!response.ok) {
-      const body = await response.text();
-      return new Response(JSON.stringify({ error: `Telavox API error [${response.status}]`, detail: body }), {
-        status: response.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: `Telavox API error [${response.status}]`, detail: rawBody.slice(0, 400) }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-
-    // Telavox returns array of extensions
+    let data: any = [];
+    try { data = JSON.parse(rawBody); } catch {}
     const users = (Array.isArray(data) ? data : []).map((ext: any) => ({
       id: ext.extension,
       name: ext.name || ext.extension,
@@ -46,10 +46,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("telavox-users error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
