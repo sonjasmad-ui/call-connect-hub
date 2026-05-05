@@ -17,12 +17,14 @@ export function getApiSettings(): ApiSettings {
   return { telavox_api_key: "", telavox_base_url: "https://api.telavox.se", pipedrive_api_token: "", pipedrive_base_url: "" };
 }
 
+// Backend secrets (TELAVOX_API_KEY / PIPEDRIVE_API_TOKEN) are configured in Lovable Cloud,
+// so we always attempt live calls. The local key is optional and used only as an override.
 export function hasTelavoxConfig(): boolean {
-  return !!getApiSettings().telavox_api_key;
+  return true;
 }
 
 export function hasPipedriveConfig(): boolean {
-  return !!getApiSettings().pipedrive_api_token;
+  return true;
 }
 
 async function invokeFunction(name: string, body: Record<string, unknown>) {
@@ -55,10 +57,8 @@ async function invokeFunction(name: string, body: Record<string, unknown>) {
 
 export async function fetchTelavoxCalls(fromDate: string, toDate: string) {
   const settings = getApiSettings();
-  if (!settings.telavox_api_key) throw new Error("Telavox API key not configured");
-
   const data = await invokeFunction("telavox-calls", {
-    apiKey: settings.telavox_api_key,
+    apiKey: settings.telavox_api_key || undefined,
     baseUrl: settings.telavox_base_url || undefined,
     fromDate,
     toDate,
@@ -68,10 +68,8 @@ export async function fetchTelavoxCalls(fromDate: string, toDate: string) {
 
 export async function fetchTelavoxUsers() {
   const settings = getApiSettings();
-  if (!settings.telavox_api_key) throw new Error("Telavox API key not configured");
-
   const data = await invokeFunction("telavox-users", {
-    apiKey: settings.telavox_api_key,
+    apiKey: settings.telavox_api_key || undefined,
     baseUrl: settings.telavox_base_url || undefined,
   });
   return data.users as Array<{ id: string; name: string; email: string; extension: string }>;
@@ -81,10 +79,8 @@ export async function fetchTelavoxUsers() {
 
 export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number) {
   const settings = getApiSettings();
-  if (!settings.pipedrive_api_token) throw new Error("Pipedrive API token not configured");
-
   const data = await invokeFunction("pipedrive-activities", {
-    apiToken: settings.pipedrive_api_token,
+    apiToken: settings.pipedrive_api_token || undefined,
     baseUrl: settings.pipedrive_base_url || undefined,
     startDate,
     endDate,
@@ -95,10 +91,8 @@ export async function fetchPipedriveActivities(startDate: string, endDate: strin
 
 export async function fetchPipedriveUsers() {
   const settings = getApiSettings();
-  if (!settings.pipedrive_api_token) throw new Error("Pipedrive API token not configured");
-
   const data = await invokeFunction("pipedrive-users", {
-    apiToken: settings.pipedrive_api_token,
+    apiToken: settings.pipedrive_api_token || undefined,
     baseUrl: settings.pipedrive_base_url || undefined,
   });
   return data.users as Array<{ id: number; name: string; email: string; active: boolean }>;
