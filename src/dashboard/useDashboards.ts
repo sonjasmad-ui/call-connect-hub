@@ -11,23 +11,28 @@ export function useDashboards() {
   const [dashboards, setDashboards] = useState<DashboardConfig[]>([]);
   const [activeId, setActiveId] = useState<string>("");
 
+  const [loaded, setLoaded] = useState(false);
+
   // Initial load
   useEffect(() => {
-    const all = dashboardStore.loadAll();
-    setDashboards(all);
-    const stored = dashboardStore.getActiveId();
-    const exists = stored && all.some(d => d.id === stored);
-    setActiveId(exists ? stored! : all[0].id);
+    (async () => {
+      const all = await dashboardStore.loadAll();
+      setDashboards(all);
+      const stored = await dashboardStore.getActiveId();
+      const exists = stored && all.some(d => d.id === stored);
+      setActiveId(exists ? stored! : all[0].id);
+      setLoaded(true);
+    })();
   }, []);
 
-  // Persist on every change
+  // Persist on every change (skip first render before load completes)
   useEffect(() => {
-    if (dashboards.length > 0) dashboardStore.saveAll(dashboards);
-  }, [dashboards]);
+    if (loaded && dashboards.length > 0) void dashboardStore.saveAll(dashboards);
+  }, [dashboards, loaded]);
 
   useEffect(() => {
-    if (activeId) dashboardStore.setActiveId(activeId);
-  }, [activeId]);
+    if (loaded && activeId) void dashboardStore.setActiveId(activeId);
+  }, [activeId, loaded]);
 
   const active = dashboards.find(d => d.id === activeId) ?? dashboards[0];
 
