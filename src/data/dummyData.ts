@@ -41,10 +41,17 @@ export interface DashboardFilters {
   status: string;
 }
 
+const _initialRange = (() => {
+  const t = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const s = new Date(t); s.setDate(s.getDate() - 29);
+  return { startDate: fmt(s), endDate: fmt(t) };
+})();
+
 export const defaultFilters: DashboardFilters = {
   datePreset: "last30",
-  startDate: "2026-03-04",
-  endDate: "2026-04-03",
+  startDate: _initialRange.startDate,
+  endDate: _initialRange.endDate,
   direction: "all",
   status: "all",
 };
