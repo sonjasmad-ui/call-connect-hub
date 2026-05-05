@@ -175,7 +175,7 @@ export function filterCalls(calls: CallRecord[], filters: DashboardFilters): Cal
 }
 
 export function getDateRange(preset: string): { startDate: string; endDate: string } {
-  const today = new Date("2026-04-03");
+  const today = new Date();
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const end = fmt(today);
 
