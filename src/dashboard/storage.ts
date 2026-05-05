@@ -36,7 +36,7 @@ export const dashboardStore = {
       return initial;
     }
 
-    return data.map(row => row.data as DashboardConfig);
+    return data.map(row => row.data as unknown as DashboardConfig);
   },
 
   async saveAll(dashboards: DashboardConfig[]): Promise<void> {
@@ -48,7 +48,7 @@ export const dashboardStore = {
       await supabase.from("shared_dashboards").delete().neq("id", "");
     }
     if (dashboards.length > 0) {
-      const rows = dashboards.map(d => ({ id: d.id, data: d as unknown as Record<string, unknown>, updated_at: new Date().toISOString() }));
+      const rows = dashboards.map(d => ({ id: d.id, data: d as never, updated_at: new Date().toISOString() }));
       const { error } = await supabase.from("shared_dashboards").upsert(rows, { onConflict: "id" });
       if (error) console.error("[dashboardStore] save error", error);
     }
