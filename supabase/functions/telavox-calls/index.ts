@@ -1,52 +1,58 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
+function normalizeBase(input?: string): string {
+  let b = (input || "").trim();
+  if (!b) return "https://api.telavox.se";
+  b = b.replace(/\/+$/, "");
+  // Strip any trailing /v1 — Telavox public endpoints are at root (e.g. /calls)
+  b = b.replace(/\/v\d+$/, "");
+  return b;
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { apiKey, baseUrl, fromDate, toDate, extension } = await req.json();
+    const { apiKey: bodyKey, baseUrl, fromDate, toDate } = await req.json();
+    const apiKey = (bodyKey && String(bodyKey).trim()) || Deno.env.get("TELAVOX_API_KEY") || "";
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Telavox API key is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Telavox API key not configured (set TELAVOX_API_KEY backend secret)" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const base = baseUrl || "https://api.telavox.se";
-    const headers = {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    };
+    const base = normalizeBase(baseUrl);
+    const url = new URL(`${base}/calls`);
+    if (fromDate) url.searchParams.set("fromDate", fromDate);
+    if (toDate) url.searchParams.set("toDate", toDate);
+    url.searchParams.set("withRecordings", "true");
 
-    // If extension is specified, we need to make the call on behalf of that extension
-    const callsUrl = new URL(`${base}/calls`);
-    if (fromDate) callsUrl.searchParams.set("fromDate", fromDate);
-    if (toDate) callsUrl.searchParams.set("toDate", toDate);
-    callsUrl.searchParams.set("withRecordings", "true");
+    console.log("telavox-calls → GET", url.toString());
 
-    // If extension provided, use the extension-specific endpoint
-    const finalUrl = extension ? `${base}/calls?fromDate=${fromDate}&toDate=${toDate}&withRecordings=true` : callsUrl.toString();
-
-    const response = await fetch(finalUrl, { headers });
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    });
+    const rawBody = await response.text();
 
     if (!response.ok) {
-      const body = await response.text();
-      return new Response(JSON.stringify({ error: `Telavox API error [${response.status}]`, detail: body }), {
-        status: response.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("telavox-calls ← non-OK", response.status, rawBody.slice(0, 500));
+      return new Response(JSON.stringify({
+        error: `Telavox API error [${response.status}]`,
+        detail: rawBody.slice(0, 400),
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    let data: any;
+    try { data = JSON.parse(rawBody); } catch {
+      return new Response(JSON.stringify({ error: "Telavox returned non-JSON", detail: rawBody.slice(0, 200) }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-
-    // Telavox returns { incoming: [...], outgoing: [...], missed: [...] }
     const calls: any[] = [];
-
-    const mapCalls = (arr: any[], direction: string, status: string) => {
+    const mapCalls = (arr: any[], direction: string, fallbackStatus: string) => {
       if (!Array.isArray(arr)) return;
       for (const c of arr) {
         const dt = c.datetimeISO || c.datetime || "";
@@ -58,28 +64,30 @@ serve(async (req) => {
           time,
           direction,
           duration: c.duration || 0,
-          status: c.duration > 0 ? "answered" : status,
+          status: c.duration > 0 ? "answered" : fallbackStatus,
           phone: c.number || "unknown",
           recordingUrl: c.recordingId && c.recordingId !== "0" ? c.recordingId : undefined,
         });
       }
     };
 
-    mapCalls(data.incoming, "inbound", "missed");
-    mapCalls(data.outgoing, "outbound", "missed");
-    mapCalls(data.missed, "inbound", "missed");
+    // Telavox shape: { incoming, outgoing, missed } — but also gracefully handle a flat list
+    if (Array.isArray(data)) {
+      mapCalls(data, "outbound", "missed");
+    } else {
+      mapCalls(data.incoming, "inbound", "missed");
+      mapCalls(data.outgoing, "outbound", "missed");
+      mapCalls(data.missed, "inbound", "missed");
+    }
 
-    // Sort by date+time descending
     calls.sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
-
     return new Response(JSON.stringify({ calls, total: calls.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("telavox-calls error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

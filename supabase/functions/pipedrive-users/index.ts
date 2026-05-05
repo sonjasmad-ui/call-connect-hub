@@ -15,11 +15,12 @@ serve(async (req) => {
   }
 
   try {
-    const { apiToken, baseUrl } = await req.json();
+    const { apiToken: bodyToken, baseUrl } = await req.json().catch(() => ({}));
+    const apiToken = (bodyToken && String(bodyToken).trim()) || Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
 
     if (!apiToken) {
-      return new Response(JSON.stringify({ error: "Pipedrive API token is required" }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: "Pipedrive API token not configured" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
