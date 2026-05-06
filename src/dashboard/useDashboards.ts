@@ -10,6 +10,7 @@ import type { DashboardConfig, MetricKey, WidgetConfig } from "./types";
 export function useDashboards() {
   const [dashboards, setDashboards] = useState<DashboardConfig[]>([]);
   const [activeId, setActiveId] = useState<string>("");
+  const [defaultId, setDefaultIdState] = useState<string>("");
 
   const [loaded, setLoaded] = useState(false);
 
@@ -17,10 +18,16 @@ export function useDashboards() {
   useEffect(() => {
     (async () => {
       const all = await dashboardStore.loadAll();
-      setDashboards(all);
-      const stored = await dashboardStore.getActiveId();
-      const exists = stored && all.some(d => d.id === stored);
-      setActiveId(exists ? stored! : all[0].id);
+      const storedDefault = await dashboardStore.getDefaultId();
+      const defaultExists = storedDefault && all.some(d => d.id === storedDefault);
+      const withDefault = all.map(d => ({ ...d, isDefault: defaultExists ? d.id === storedDefault : d.isDefault }));
+      setDashboards(withDefault);
+      if (defaultExists) setDefaultIdState(storedDefault!);
+
+      const storedActive = await dashboardStore.getActiveId();
+      const activeExists = storedActive && withDefault.some(d => d.id === storedActive);
+      const fallbackId = defaultExists ? storedDefault! : withDefault[0]?.id ?? "";
+      setActiveId(activeExists ? storedActive! : fallbackId);
       setLoaded(true);
     })();
   }, []);
@@ -34,6 +41,10 @@ export function useDashboards() {
     if (loaded && activeId) void dashboardStore.setActiveId(activeId);
   }, [activeId, loaded]);
 
+  useEffect(() => {
+    if (loaded && defaultId) void dashboardStore.setDefaultId(defaultId);
+  }, [defaultId, loaded]);
+
   const active = dashboards.find(d => d.id === activeId) ?? dashboards[0];
 
   const updateActive = useCallback((mutator: (d: DashboardConfig) => DashboardConfig) => {
@@ -44,7 +55,7 @@ export function useDashboards() {
     const id = makeId("dash");
     const now = new Date().toISOString();
     const next: DashboardConfig = {
-      id, name, widgets: [], createdAt: now, updatedAt: now,
+      id, name, widgets: [], createdAt: now, updatedAt: now, isDefault: false,
     };
     setDashboards(prev => [...prev, next]);
     setActiveId(id);
@@ -64,6 +75,7 @@ export function useDashboards() {
         id: newId,
         name: `${src.name} (copy)`,
         isPreset: false,
+        isDefault: false,
         widgets: src.widgets.map(w => ({ ...w, id: makeId("w") })),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -77,9 +89,14 @@ export function useDashboards() {
     setDashboards(prev => {
       const filtered = prev.filter(d => d.id !== id);
       if (id === activeId && filtered[0]) setActiveId(filtered[0].id);
+      if (id === defaultId) {
+        const nextDefaultId = filtered[0]?.id ?? "";
+        setDefaultIdState(nextDefaultId);
+        return filtered.map((d, index) => ({ ...d, isDefault: index === 0 }));
+      }
       return filtered;
     });
-  }, [activeId]);
+  }, [activeId, defaultId]);
 
   const addWidget = useCallback((metric: MetricKey) => {
     const def = getWidgetDefinition(metric);
@@ -120,15 +137,27 @@ export function useDashboards() {
     }));
   }, [updateActive]);
 
+  const starDashboard = useCallback((id: string) => {
+    setDefaultIdState(id);
+    setDashboards(prev => prev.map(d => ({
+      ...d,
+      isDefault: d.id === id,
+      updatedAt: d.id === id ? new Date().toISOString() : d.updatedAt,
+    })));
+    setActiveId(id);
+  }, []);
+
   return {
     dashboards,
     active,
     activeId,
+    defaultId,
     setActiveId,
     createDashboard,
     renameDashboard,
     duplicateDashboard,
     deleteDashboard,
+    starDashboard,
     addWidget,
     updateWidget,
     removeWidget,
