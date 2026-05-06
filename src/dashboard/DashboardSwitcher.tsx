@@ -9,15 +9,17 @@ import type { DashboardConfig } from "./types";
 interface DashboardSwitcherProps {
   dashboards: DashboardConfig[];
   activeId: string;
+  defaultId?: string;
   onSelect: (id: string) => void;
   onCreate: (name: string) => void;
   onRename: (id: string, name: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onStar: (id: string) => void;
 }
 
 export function DashboardSwitcher({
-  dashboards, activeId, onSelect, onCreate, onRename, onDuplicate, onDelete,
+  dashboards, activeId, defaultId, onSelect, onCreate, onRename, onDuplicate, onDelete, onStar,
 }: DashboardSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -79,9 +81,15 @@ export function DashboardSwitcher({
                       <p className="font-medium truncate">{d.name}</p>
                       {d.description && <p className="text-[11px] text-muted-foreground truncate">{d.description}</p>}
                     </div>
+                    {d.id === defaultId && <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />}
                     {d.isPreset && <span className="text-[9px] uppercase tracking-wider text-muted-foreground shrink-0">Preset</span>}
                   </button>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center pr-1">
+                    <button
+                      onClick={() => onStar(d.id)}
+                      title={d.id === defaultId ? "Default dashboard" : "Set as default"}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                    ><Star className={cn("h-3 w-3", d.id === defaultId && "fill-primary text-primary")} /></button>
                     {!d.isPreset && (
                       <button
                         onClick={() => { setEditingId(d.id); setEditName(d.name); }}
