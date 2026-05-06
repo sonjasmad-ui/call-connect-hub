@@ -84,6 +84,7 @@ export interface DashboardConfig {
   name: string;
   description?: string;
   widgets: WidgetConfig[];
+  isDefault?: boolean;
   /** ISO date created/updated */
   createdAt: string;
   updatedAt: string;
