@@ -37,8 +37,8 @@ export default function Index() {
   } = useDashboardData(filters);
 
   const {
-    dashboards, active, activeId, setActiveId,
-    createDashboard, renameDashboard, duplicateDashboard, deleteDashboard,
+    dashboards, active, activeId, defaultId, setActiveId,
+    createDashboard, renameDashboard, duplicateDashboard, deleteDashboard, starDashboard,
     addWidget, updateWidget, removeWidget, setFeatured, setLayouts,
   } = useDashboards();
 
@@ -78,11 +78,13 @@ export default function Index() {
               <DashboardSwitcher
                 dashboards={dashboards}
                 activeId={activeId}
+                defaultId={defaultId}
                 onSelect={setActiveId}
                 onCreate={createDashboard}
                 onRename={renameDashboard}
                 onDuplicate={duplicateDashboard}
                 onDelete={deleteDashboard}
+                onStar={starDashboard}
               />
               <div className="hidden md:flex items-center gap-1.5">
                 {usingLiveData.telavox ? (
