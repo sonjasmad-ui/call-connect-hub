@@ -38,6 +38,8 @@ export type MetricKey =
   | "callTarget"
   | "activityPerDay"
   | "pipelineCoverage"
+  | "emailsSent"
+  | "linkedinSent"
   // Trend metrics
   | "dailyCallsTrend"
   | "dailyTalkTimeTrend"
