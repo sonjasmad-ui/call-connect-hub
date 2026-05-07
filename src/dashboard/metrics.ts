@@ -7,14 +7,14 @@ import type { CallRecord, Meeting } from "@/data/dummyData";
 export interface MetricInputs {
   calls: CallRecord[];
   meetings: Meeting[];
+  emails?: Meeting[];
+  linkedins?: Meeting[];
   startDate: string;
   endDate: string;
   bookingTarget: number;
   callTarget: number;
   dateRange?: string;
-  /** Founding-AE: target pipeline value for "Pipeline Coverage" widget */
   pipelineQuota?: number;
-  /** Founding-AE: assumed avg deal value when Pipedrive doesn't expose deal_value */
   avgDealValue?: number;
 }
 
