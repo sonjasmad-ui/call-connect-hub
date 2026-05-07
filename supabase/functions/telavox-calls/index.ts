@@ -81,6 +81,47 @@ serve(async (req) => {
     }
 
     calls.sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+
+    // Enrich with Pipedrive contact lookup (name + company) by phone number.
+    const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
+    if (pdToken) {
+      const uniquePhones = Array.from(new Set(calls.map(c => c.phone).filter(p => p && p !== "unknown")));
+      const cache = new Map<string, { contactName?: string; company?: string }>();
+      const lookup = async (phone: string) => {
+        // Try as-is, then digits only, then last 8 digits (DK local) — Pipedrive search ignores spaces.
+        const digits = phone.replace(/\D/g, "");
+        const variants = Array.from(new Set([phone, digits, digits.slice(-8)])).filter(Boolean);
+        for (const term of variants) {
+          try {
+            const u = new URL("https://api.pipedrive.com/api/v2/persons/search");
+            u.searchParams.set("api_token", pdToken);
+            u.searchParams.set("term", term);
+            u.searchParams.set("fields", "phone");
+            u.searchParams.set("limit", "1");
+            const r = await fetch(u.toString());
+            if (!r.ok) continue;
+            const j = await r.json();
+            const item = j?.data?.items?.[0]?.item;
+            if (item) return { contactName: item.name, company: item.organization?.name };
+          } catch {}
+        }
+        return {};
+      };
+      // Limit concurrency to avoid rate limits.
+      const queue = [...uniquePhones];
+      const workers = Array.from({ length: 5 }, async () => {
+        while (queue.length) {
+          const p = queue.shift()!;
+          cache.set(p, await lookup(p));
+        }
+      });
+      await Promise.all(workers);
+      for (const c of calls) {
+        const hit = cache.get(c.phone);
+        if (hit) { c.contactName = hit.contactName; c.company = hit.company; }
+      }
+    }
+
     return new Response(JSON.stringify({ calls, total: calls.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
