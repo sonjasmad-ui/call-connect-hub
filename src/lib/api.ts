@@ -77,7 +77,7 @@ export async function fetchTelavoxUsers() {
 
 // ── Pipedrive ──
 
-export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number) {
+export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string) {
   const settings = getApiSettings();
   const data = await invokeFunction("pipedrive-activities", {
     apiToken: settings.pipedrive_api_token || undefined,
@@ -85,6 +85,7 @@ export async function fetchPipedriveActivities(startDate: string, endDate: strin
     startDate,
     endDate,
     userId: userId || undefined,
+    type,
   });
   return data.meetings as any[];
 }
