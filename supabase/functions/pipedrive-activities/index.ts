@@ -66,11 +66,15 @@ serve(async (req) => {
     }
 
     const allActivities = data.data || [];
-    // Client-side filter to meetings (default) unless caller passed a different type.
-    const wanted = type || "meeting";
-    const filtered = allActivities.filter((a: any) => !type ? a.type === wanted : true);
+    // Filter by add_time (creation date) within [startDate, endDate] if provided.
+    const filteredByDate = (startDate && endDate)
+      ? allActivities.filter((a: any) => {
+          const created = a.add_time ? a.add_time.slice(0, 10) : "";
+          return created && created >= startDate && created <= endDate;
+        })
+      : allActivities;
 
-    const meetings = filtered.map((a: any) => ({
+    const meetings = filteredByDate.map((a: any) => ({
       id: String(a.id),
       title: a.subject || "Meeting",
       contactName: a.person_name || "Unknown",
