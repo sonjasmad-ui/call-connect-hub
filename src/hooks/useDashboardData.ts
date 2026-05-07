@@ -37,6 +37,8 @@ interface PipedriveUser {
 export function useDashboardData(filters: DashboardFilters) {
   const [calls, setCalls] = useState<CallRecord[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [emails, setEmails] = useState<Meeting[]>([]);
+  const [linkedins, setLinkedins] = useState<Meeting[]>([]);
   const [telavoxUsers, setTelavoxUsers] = useState<TelavoxUser[]>([]);
   const [pipedriveUsers, setPipedriveUsers] = useState<PipedriveUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,7 +69,6 @@ export function useDashboardData(filters: DashboardFilters) {
     setLoading(true);
     const live = { telavox: false, pipedrive: false };
 
-    // Fetch calls
     if (hasTelavoxConfig()) {
       try {
         const liveCalls = await fetchTelavoxCalls(filters.startDate, filters.endDate);
@@ -82,20 +83,37 @@ export function useDashboardData(filters: DashboardFilters) {
       setCalls(dummyCalls);
     }
 
-    // Fetch meetings
     if (hasPipedriveConfig()) {
+      const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
       try {
-        const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
-        const liveMeetings = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId);
+        const liveMeetings = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "meeting");
         setMeetings(liveMeetings);
         live.pipedrive = true;
       } catch (err: any) {
-        console.error("Pipedrive fetch failed, using dummy data:", err);
+        console.error("Pipedrive meetings fetch failed:", err);
         toast.error("Pipedrive: " + (err.message || "Failed to fetch meetings"));
         setMeetings(dummyMeetings);
       }
+      // Emails (best-effort, silent on error)
+      try {
+        const liveEmails = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email");
+        setEmails(liveEmails);
+      } catch (err) {
+        console.warn("Pipedrive emails fetch failed:", err);
+        setEmails([]);
+      }
+      // LinkedIn (custom activity type — silent if not configured)
+      try {
+        const liveLinkedins = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin");
+        setLinkedins(liveLinkedins);
+      } catch (err) {
+        console.warn("Pipedrive linkedin fetch failed:", err);
+        setLinkedins([]);
+      }
     } else {
       setMeetings(dummyMeetings);
+      setEmails([]);
+      setLinkedins([]);
     }
 
     setUsingLiveData(live);
@@ -110,11 +128,9 @@ export function useDashboardData(filters: DashboardFilters) {
     loadData();
   }, [loadData]);
 
-  // Apply client-side filters
   const filteredCalls = filterCalls(calls, filters).filter(c => {
     if (selectedTelavoxUser !== "all") {
-      // For Telavox user filtering - if the call data has a user/extension field
-      // This depends on the API response; for now we pass through
+      // pass-through
     }
     return true;
   });
@@ -123,7 +139,6 @@ export function useDashboardData(filters: DashboardFilters) {
   const dailyData = getDailyData(filteredCalls);
   const hourlyData = getHourlyData(filteredCalls);
 
-  // Count bookings created in the selected period
   const bookingsCount = meetings.filter(m => {
     const d = m.createdDate || m.date;
     return d >= filters.startDate && d <= filters.endDate;
@@ -132,6 +147,8 @@ export function useDashboardData(filters: DashboardFilters) {
   return {
     filteredCalls,
     meetings,
+    emails,
+    linkedins,
     overview,
     dailyData,
     hourlyData,

@@ -7,14 +7,14 @@ import type { CallRecord, Meeting } from "@/data/dummyData";
 export interface MetricInputs {
   calls: CallRecord[];
   meetings: Meeting[];
+  emails?: Meeting[];
+  linkedins?: Meeting[];
   startDate: string;
   endDate: string;
   bookingTarget: number;
   callTarget: number;
   dateRange?: string;
-  /** Founding-AE: target pipeline value for "Pipeline Coverage" widget */
   pipelineQuota?: number;
-  /** Founding-AE: assumed avg deal value when Pipedrive doesn't expose deal_value */
   avgDealValue?: number;
 }
 
@@ -35,6 +35,10 @@ export function computeScalar(metric: string, input: MetricInputs): number {
     return d >= startDate && d <= endDate;
   }).length;
 
+  const inRange = (d: string) => d >= startDate && d <= endDate;
+  const countIn = (arr: Meeting[] | undefined) =>
+    (arr || []).filter(m => inRange(m.createdDate || m.date)).length;
+
   switch (metric) {
     case "totalCalls":     return total;
     case "answeredCalls":  return answeredCount;
@@ -46,6 +50,8 @@ export function computeScalar(metric: string, input: MetricInputs): number {
     case "callsPerBooking":return bookingsInPeriod > 0 ? total / bookingsInPeriod : 0;
     case "bookingTarget":  return bookingsInPeriod;
     case "callTarget":     return total;
+    case "emailsSent":     return countIn(input.emails);
+    case "linkedinSent":   return countIn(input.linkedins);
     case "activityPerDay": {
       const days = new Set<string>();
       calls.forEach(c => days.add(c.date));

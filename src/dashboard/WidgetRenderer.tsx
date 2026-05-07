@@ -14,7 +14,7 @@ import {
   Target, Clock, Timer, Zap, Repeat, Activity, CalendarDays, Hourglass,
   CalendarCheck, TrendingUp, Trophy, Flag,
   LineChart as LineIcon, PieChart as PieIcon, BarChart3,
-  Users, Layers, Mic, Calendar, GitBranch,
+  Users, Layers, Mic, Calendar, GitBranch, Mail, Linkedin,
   Pencil, Check, Search, Building2, Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -34,7 +34,7 @@ const ICONS: Record<string, LucideIcon> = {
   Target, Clock, Timer, Zap, Repeat, Activity, CalendarDays, Hourglass,
   CalendarCheck, TrendingUp, Trophy, Flag,
   LineChart: LineIcon, PieChart: PieIcon, BarChart3,
-  Users, Layers, Mic, Calendar, GitBranch,
+  Users, Layers, Mic, Calendar, GitBranch, Mail, Linkedin,
 };
 
 const tooltipStyle = {
