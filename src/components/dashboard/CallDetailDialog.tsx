@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Building2, User, Clock, Calendar, FileText, Volume2 } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Building2, User, Clock, Calendar, FileText } from "lucide-react";
 import type { CallRecord } from "@/data/dummyData";
 
 interface CallDetailDialogProps {
