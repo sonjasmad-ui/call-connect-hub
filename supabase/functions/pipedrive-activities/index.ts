@@ -27,17 +27,15 @@ serve(async (req) => {
 
     const base = normalizeBase(baseUrl);
 
+    // Pipedrive's start_date/end_date filter on due_date, but we want to count
+    // bookings by creation time (add_time). So fetch recent activities and filter client-side.
+    const wantedType = type || "meeting";
     const url = new URL(`${base}/activities`);
     url.searchParams.set("api_token", apiToken);
-    // Only filter by type if explicitly provided — Pipedrive activity keys vary per account.
-    if (type) url.searchParams.set("type", type);
-    // Pipedrive requires both start_date and end_date together, otherwise 400.
-    if (startDate && endDate) {
-      url.searchParams.set("start_date", startDate);
-      url.searchParams.set("end_date", endDate);
-    }
+    url.searchParams.set("type", wantedType);
     if (userId) url.searchParams.set("user_id", String(userId));
     url.searchParams.set("limit", "500");
+    url.searchParams.set("start", "0");
 
     const safeUrl = url.toString().replace(apiToken, "***");
     console.log("pipedrive-activities → GET", safeUrl);
@@ -68,11 +66,15 @@ serve(async (req) => {
     }
 
     const allActivities = data.data || [];
-    // Client-side filter to meetings (default) unless caller passed a different type.
-    const wanted = type || "meeting";
-    const filtered = allActivities.filter((a: any) => !type ? a.type === wanted : true);
+    // Filter by add_time (creation date) within [startDate, endDate] if provided.
+    const filteredByDate = (startDate && endDate)
+      ? allActivities.filter((a: any) => {
+          const created = a.add_time ? a.add_time.slice(0, 10) : "";
+          return created && created >= startDate && created <= endDate;
+        })
+      : allActivities;
 
-    const meetings = filtered.map((a: any) => ({
+    const meetings = filteredByDate.map((a: any) => ({
       id: String(a.id),
       title: a.subject || "Meeting",
       contactName: a.person_name || "Unknown",

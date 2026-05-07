@@ -75,7 +75,7 @@ export function DashboardGrid({
         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
         cols={{ lg: 12, md: 12, sm: 12, xs: 4, xxs: 4 }}
         rowHeight={isMobile ? 44 : 60}
-        margin={isMobile ? [8, 8] : [16, 16]}
+        margin={isMobile ? [12, 12] : [16, 16]}
         containerPadding={[0, 0]}
         isDraggable={editMode && !isMobile}
         isResizable={editMode && !isMobile}
