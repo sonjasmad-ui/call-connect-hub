@@ -117,6 +117,20 @@ export const WIDGET_REGISTRY: Record<MetricKey, WidgetDefinition> = {
     defaultFormat: "percent", defaultLayout: { w: 3, h: 3 },
     tags: ["ae", "pipeline", "quota"], accent: "teal", icon: "TrendingUp",
   },
+  emailsSent: {
+    metric: "emailsSent", category: "kpi",
+    title: "Emails Sent", description: "Email activities logged",
+    supportedVisualizations: ["kpi", "line", "bar"],
+    defaultFormat: "integer", defaultLayout: { w: 3, h: 3 },
+    tags: ["email", "outreach"], accent: "blue", icon: "Mail",
+  },
+  linkedinSent: {
+    metric: "linkedinSent", category: "kpi",
+    title: "LinkedIn Messages", description: "LinkedIn activities logged",
+    supportedVisualizations: ["kpi", "line", "bar"],
+    defaultFormat: "integer", defaultLayout: { w: 3, h: 3 },
+    tags: ["linkedin", "outreach"], accent: "teal", icon: "Linkedin",
+  },
 
   // ---------- Trends ----------
   dailyCallsTrend: {
