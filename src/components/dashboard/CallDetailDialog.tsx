@@ -87,23 +87,6 @@ export function CallDetailDialog({ call, onClose }: CallDetailDialogProps) {
                 </div>
               )}
 
-              {call.recordingUrl && (
-                <div className="rounded-lg border border-border bg-card p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
-                    <Volume2 className="h-3 w-3" /> Recording
-                  </p>
-                  <audio
-                    controls
-                    preload="none"
-                    className="w-full h-9"
-                    src={
-                      call.recordingUrl.startsWith("http")
-                        ? call.recordingUrl
-                        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/telavox-recording?id=${encodeURIComponent(call.recordingUrl)}`
-                    }
-                  />
-                </div>
-              )}
             </div>
           </>
         )}
