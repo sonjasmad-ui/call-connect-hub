@@ -29,7 +29,7 @@ export default function Index() {
   const navigate = useNavigate();
 
   const {
-    filteredCalls, meetings, loading, usingLiveData,
+    filteredCalls, meetings, emails, linkedins, loading, usingLiveData,
     telavoxUsers, pipedriveUsers,
     selectedTelavoxUser, selectedPipedriveUser,
     setSelectedTelavoxUser, setSelectedPipedriveUser,
@@ -45,12 +45,14 @@ export default function Index() {
   const inputs = useMemo(() => ({
     calls: filteredCalls,
     meetings,
+    emails,
+    linkedins,
     startDate: filters.startDate,
     endDate: filters.endDate,
     bookingTarget,
     callTarget,
     dateRange: filters.datePreset,
-  }), [filteredCalls, meetings, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset]);
+  }), [filteredCalls, meetings, emails, linkedins, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset]);
 
   const handleLock = () => {
     sessionStorage.removeItem("dashboard_access");
