@@ -24,33 +24,66 @@ serve(async (req) => {
     }
 
     const base = normalizeBase(baseUrl);
-    const url = new URL(`${base}/calls`);
-    if (fromDate) url.searchParams.set("fromDate", fromDate);
-    if (toDate) url.searchParams.set("toDate", toDate);
-    url.searchParams.set("withRecordings", "true");
 
-    console.log("telavox-calls → GET", url.toString());
+    // Paginate through Telavox results — the default page size is small (≈50),
+    // so without paging we only see the most recent slice of the day.
+    const PAGE_SIZE = 500;
+    const MAX_PAGES = 20;
+    let aggregated: any = null;
+    const aggregatedList: any[] = [];
+    let page = 0;
+    let lastPageCount = 0;
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    });
-    const rawBody = await response.text();
+    while (page < MAX_PAGES) {
+      const url = new URL(`${base}/calls`);
+      if (fromDate) url.searchParams.set("fromDate", fromDate);
+      if (toDate) url.searchParams.set("toDate", toDate);
+      url.searchParams.set("withRecordings", "true");
+      url.searchParams.set("limit", String(PAGE_SIZE));
+      url.searchParams.set("offset", String(page * PAGE_SIZE));
 
-    if (!response.ok) {
-      console.error("telavox-calls ← non-OK", response.status, rawBody.slice(0, 500));
-      return new Response(JSON.stringify({
-        error: `Telavox API error [${response.status}]`,
-        detail: rawBody.slice(0, 400),
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+      console.log("telavox-calls → GET", url.toString());
 
-    let data: any;
-    try { data = JSON.parse(rawBody); } catch {
-      return new Response(JSON.stringify({ error: "Telavox returned non-JSON", detail: rawBody.slice(0, 200) }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       });
+      const rawBody = await response.text();
+
+      if (!response.ok) {
+        console.error("telavox-calls ← non-OK", response.status, rawBody.slice(0, 500));
+        return new Response(JSON.stringify({
+          error: `Telavox API error [${response.status}]`,
+          detail: rawBody.slice(0, 400),
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      let data: any;
+      try { data = JSON.parse(rawBody); } catch {
+        return new Response(JSON.stringify({ error: "Telavox returned non-JSON", detail: rawBody.slice(0, 200) }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let pageCount = 0;
+      if (Array.isArray(data)) {
+        aggregatedList.push(...data);
+        pageCount = data.length;
+      } else {
+        if (!aggregated) aggregated = { incoming: [], outgoing: [], missed: [] };
+        for (const k of ["incoming", "outgoing", "missed"]) {
+          if (Array.isArray(data?.[k])) {
+            aggregated[k].push(...data[k]);
+            pageCount += data[k].length;
+          }
+        }
+      }
+      console.log(`telavox-calls ← page ${page} returned ${pageCount} records`);
+      lastPageCount = pageCount;
+      if (pageCount < PAGE_SIZE) break;
+      page++;
     }
 
+    const data: any = aggregated || aggregatedList;
     const calls: any[] = [];
     const mapCalls = (arr: any[], direction: string, fallbackStatus: string) => {
       if (!Array.isArray(arr)) return;

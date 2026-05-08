@@ -67,12 +67,18 @@ serve(async (req) => {
 
     const allActivities = data.data || [];
     // Filter by add_time (creation date) within [startDate, endDate] if provided.
-    const filteredByDate = (startDate && endDate)
+    let filteredByDate = (startDate && endDate)
       ? allActivities.filter((a: any) => {
           const created = a.add_time ? a.add_time.slice(0, 10) : "";
           return created && created >= startDate && created <= endDate;
         })
       : allActivities;
+
+    // For meetings only, exclude calendar-only events (no Pipedrive deal linked).
+    // Real "bookings" are activities tied to a deal — calendar imports have no deal_id.
+    if (wantedType === "meeting") {
+      filteredByDate = filteredByDate.filter((a: any) => !!a.deal_id);
+    }
 
     const meetings = filteredByDate.map((a: any) => ({
       id: String(a.id),
