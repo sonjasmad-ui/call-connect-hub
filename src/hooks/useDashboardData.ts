@@ -39,6 +39,7 @@ export function useDashboardData(filters: DashboardFilters) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [emails, setEmails] = useState<Meeting[]>([]);
   const [linkedins, setLinkedins] = useState<Meeting[]>([]);
+  const [telavoxMeta, setTelavoxMeta] = useState<{ mayBeIncomplete?: boolean; limitation?: string } | null>(null);
   const [telavoxUsers, setTelavoxUsers] = useState<TelavoxUser[]>([]);
   const [pipedriveUsers, setPipedriveUsers] = useState<PipedriveUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,16 +72,19 @@ export function useDashboardData(filters: DashboardFilters) {
 
     if (hasTelavoxConfig()) {
       try {
-        const liveCalls = await fetchTelavoxCalls(filters.startDate, filters.endDate);
-        setCalls(liveCalls);
+        const telavox = await fetchTelavoxCalls(filters.startDate, filters.endDate);
+        setCalls(telavox.calls);
+        setTelavoxMeta(telavox.meta || null);
         live.telavox = true;
       } catch (err: any) {
         console.error("Telavox fetch failed, using dummy data:", err);
         toast.error("Telavox: " + (err.message || "Failed to fetch calls"));
         setCalls(dummyCalls);
+        setTelavoxMeta(null);
       }
     } else {
       setCalls(dummyCalls);
+      setTelavoxMeta(null);
     }
 
     if (hasPipedriveConfig()) {
@@ -155,6 +159,7 @@ export function useDashboardData(filters: DashboardFilters) {
     bookingsCount,
     loading,
     usingLiveData,
+    telavoxMeta,
     telavoxUsers,
     pipedriveUsers,
     selectedTelavoxUser,
