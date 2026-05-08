@@ -63,7 +63,10 @@ export async function fetchTelavoxCalls(fromDate: string, toDate: string) {
     fromDate,
     toDate,
   });
-  return data.calls as any[];
+  return {
+    calls: data.calls as any[],
+    meta: data.meta as { mayBeIncomplete?: boolean; limitation?: string } | undefined,
+  };
 }
 
 export async function fetchTelavoxUsers() {

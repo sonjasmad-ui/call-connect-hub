@@ -25,65 +25,32 @@ serve(async (req) => {
 
     const base = normalizeBase(baseUrl);
 
-    // Paginate through Telavox results — the default page size is small (≈50),
-    // so without paging we only see the most recent slice of the day.
-    const PAGE_SIZE = 500;
-    const MAX_PAGES = 20;
-    let aggregated: any = null;
-    const aggregatedList: any[] = [];
-    let page = 0;
-    let lastPageCount = 0;
+    const url = new URL(`${base}/calls`);
+    if (fromDate) url.searchParams.set("fromDate", fromDate);
+    if (toDate) url.searchParams.set("toDate", toDate);
+    url.searchParams.set("withRecordings", "true");
 
-    while (page < MAX_PAGES) {
-      const url = new URL(`${base}/calls`);
-      if (fromDate) url.searchParams.set("fromDate", fromDate);
-      if (toDate) url.searchParams.set("toDate", toDate);
-      url.searchParams.set("withRecordings", "true");
-      url.searchParams.set("limit", String(PAGE_SIZE));
-      url.searchParams.set("offset", String(page * PAGE_SIZE));
+    console.log("telavox-calls → GET", url.toString());
 
-      console.log("telavox-calls → GET", url.toString());
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    });
+    const rawBody = await response.text();
 
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      });
-      const rawBody = await response.text();
-
-      if (!response.ok) {
-        console.error("telavox-calls ← non-OK", response.status, rawBody.slice(0, 500));
-        return new Response(JSON.stringify({
-          error: `Telavox API error [${response.status}]`,
-          detail: rawBody.slice(0, 400),
-        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      let data: any;
-      try { data = JSON.parse(rawBody); } catch {
-        return new Response(JSON.stringify({ error: "Telavox returned non-JSON", detail: rawBody.slice(0, 200) }), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      let pageCount = 0;
-      if (Array.isArray(data)) {
-        aggregatedList.push(...data);
-        pageCount = data.length;
-      } else {
-        if (!aggregated) aggregated = { incoming: [], outgoing: [], missed: [] };
-        for (const k of ["incoming", "outgoing", "missed"]) {
-          if (Array.isArray(data?.[k])) {
-            aggregated[k].push(...data[k]);
-            pageCount += data[k].length;
-          }
-        }
-      }
-      console.log(`telavox-calls ← page ${page} returned ${pageCount} records`);
-      lastPageCount = pageCount;
-      if (pageCount < PAGE_SIZE) break;
-      page++;
+    if (!response.ok) {
+      console.error("telavox-calls ← non-OK", response.status, rawBody.slice(0, 500));
+      return new Response(JSON.stringify({
+        error: `Telavox API error [${response.status}]`,
+        detail: rawBody.slice(0, 400),
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const data: any = aggregated || aggregatedList;
+    let data: any;
+    try { data = JSON.parse(rawBody); } catch {
+      return new Response(JSON.stringify({ error: "Telavox returned non-JSON", detail: rawBody.slice(0, 200) }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const calls: any[] = [];
     const mapCalls = (arr: any[], direction: string, fallbackStatus: string) => {
       if (!Array.isArray(arr)) return;
@@ -113,12 +80,19 @@ serve(async (req) => {
       mapCalls(data.missed, "inbound", "missed");
     }
 
-    calls.sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+    const deduped = Array.from(new Map(calls.map((call) => {
+      const key = `${call.date}|${call.time}|${call.direction}|${call.phone}|${call.duration}|${call.recordingUrl || ""}`;
+      return [key, call] as const;
+    })).values());
+
+    deduped.sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+
+    console.log(`telavox-calls ← returned ${deduped.length} normalized records`);
 
     // Enrich with Pipedrive contact lookup (name + company) by phone number.
     const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
     if (pdToken) {
-      const uniquePhones = Array.from(new Set(calls.map(c => c.phone).filter(p => p && p !== "unknown")));
+      const uniquePhones = Array.from(new Set(deduped.map(c => c.phone).filter(p => p && p !== "unknown")));
       const cache = new Map<string, { contactName?: string; company?: string }>();
       const lookup = async (phone: string) => {
         // Try as-is, then digits only, then last 8 digits (DK local) — Pipedrive search ignores spaces.
@@ -149,13 +123,20 @@ serve(async (req) => {
         }
       });
       await Promise.all(workers);
-      for (const c of calls) {
+      for (const c of deduped) {
         const hit = cache.get(c.phone);
         if (hit) { c.contactName = hit.contactName; c.company = hit.company; }
       }
     }
 
-    return new Response(JSON.stringify({ calls, total: calls.length }), {
+    return new Response(JSON.stringify({
+      calls: deduped,
+      total: deduped.length,
+      meta: {
+        mayBeIncomplete: deduped.length >= 30,
+        limitation: "Telavox call history only exposes a recent-call feed for the authenticated user, so totals can undercount busy date ranges.",
+      },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

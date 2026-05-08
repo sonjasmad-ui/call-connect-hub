@@ -30,6 +30,7 @@ export default function Index() {
 
   const {
     filteredCalls, meetings, emails, linkedins, loading, usingLiveData,
+    telavoxMeta,
     telavoxUsers, pipedriveUsers,
     selectedTelavoxUser, selectedPipedriveUser,
     setSelectedTelavoxUser, setSelectedPipedriveUser,
@@ -101,6 +102,15 @@ export default function Index() {
                 {usingLiveData.pipedrive && (
                   <Badge variant="outline" className="text-[10px] gap-1 border-[hsl(var(--stat-green))]/30 text-[hsl(var(--stat-green))]">
                     <Wifi className="h-3 w-3" /> Pipedrive
+                  </Badge>
+                )}
+                {usingLiveData.telavox && telavoxMeta?.mayBeIncomplete && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] gap-1 border-[hsl(var(--warning))]/30 text-[hsl(var(--warning))]"
+                    title={telavoxMeta.limitation}
+                  >
+                    Limited call history
                   </Badge>
                 )}
               </div>
