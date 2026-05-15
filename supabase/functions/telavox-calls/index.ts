@@ -79,7 +79,7 @@ serve(async (req) => {
       terminatedCallReason
       timestamp
       time { start end }
-      duration { total talk }
+      duration { total }
       customerTarget { number }
     }
     totalCount
