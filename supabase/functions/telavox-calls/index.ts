@@ -16,15 +16,115 @@ serve(async (req) => {
   try {
     const { apiKey: bodyKey, baseUrl, fromDate, toDate } = await req.json();
     const apiKey = (bodyKey && String(bodyKey).trim()) || Deno.env.get("TELAVOX_API_KEY") || "";
+    const statsToken = (Deno.env.get("TELAVOX_STATS_TOKEN") || "").trim();
 
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Telavox API key not configured (set TELAVOX_API_KEY backend secret)" }), {
+    if (!apiKey && !statsToken) {
+      return new Response(JSON.stringify({ error: "Telavox not configured (set TELAVOX_API_KEY or TELAVOX_STATS_TOKEN)" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const base = normalizeBase(baseUrl);
+    // ─── Stream Liner Historic (GraphQL) — preferred when stats token is set ───
+    let usedStatsApi = false;
+    let statsCalls: any[] | null = null;
+    let statsError: string | null = null;
 
+    if (statsToken && fromDate && toDate) {
+      // Build ISO 8601 UTC range covering the full local day(s).
+      const fromIso = `${fromDate}T00:00:00Z`;
+      const toIso = `${toDate}T23:59:59Z`;
+      const query = `query Historic($from: DateTime!, $to: DateTime!, $cursor: String) {
+  calls(filter: { time: { start: { gte: $from, lte: $to } } }, first: 500, after: $cursor) {
+    nodes {
+      idCall
+      callDirection
+      answered
+      voicemail
+      recorded
+      terminatedCallReason
+      time { start end }
+      duration { total talk wait hold }
+      customerTarget { number }
+    }
+    totalCount
+    cursor
+    hasNextPage
+  }
+}`;
+      try {
+        const aggregated: any[] = [];
+        let cursor: string | null = null;
+        let pages = 0;
+        while (pages < 20) {
+          const r = await fetch("https://statistics-api.telavox.se/graphql", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${statsToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ query, variables: { from: fromIso, to: toIso, cursor } }),
+          });
+          const txt = await r.text();
+          let json: any; try { json = JSON.parse(txt); } catch { throw new Error(`GraphQL non-JSON: ${txt.slice(0, 200)}`); }
+          if (json.errors) throw new Error(`GraphQL: ${JSON.stringify(json.errors).slice(0, 400)}`);
+          const conn = json?.data?.calls;
+          if (!conn) throw new Error(`Unexpected GraphQL shape: ${txt.slice(0, 200)}`);
+          for (const n of (conn.nodes || [])) aggregated.push(n);
+          if (!conn.hasNextPage || !conn.cursor) break;
+          cursor = conn.cursor;
+          pages++;
+        }
+        statsCalls = aggregated;
+        usedStatsApi = true;
+        console.log(`telavox-calls(stats) ← ${aggregated.length} calls across ${pages + 1} page(s)`);
+      } catch (e: any) {
+        statsError = e?.message || String(e);
+        console.error("telavox-calls(stats) failed, falling back to REST:", statsError);
+      }
+    }
+
+    // If GraphQL succeeded, normalize and return early.
+    if (usedStatsApi && statsCalls) {
+      const normalized = statsCalls.map((c: any) => {
+        const startMs = typeof c?.time?.start === "number" ? c.time.start
+          : (c?.time?.start ? Date.parse(c.time.start) : 0);
+        const dt = new Date(startMs || Date.now());
+        const date = dt.toISOString().slice(0, 10);
+        const time = dt.toISOString().slice(11, 16);
+        const dur = c?.duration?.total || c?.duration?.talk || 0;
+        const dirRaw = String(c?.callDirection || "").toLowerCase();
+        const direction = dirRaw.startsWith("in") ? "inbound" : "outbound";
+        let status = "missed";
+        if (c?.voicemail) status = "voicemail";
+        else if (c?.answered) status = "answered";
+        else if (c?.terminatedCallReason === "busy" || c?.terminatedCallReason === "user_busy") status = "busy";
+        return {
+          id: c?.idCall || `${date}-${time}-${Math.random().toString(36).slice(2, 8)}`,
+          date, time, direction,
+          duration: dur,
+          status,
+          phone: c?.customerTarget?.number || "unknown",
+          recordingUrl: c?.recorded ? c.idCall : undefined,
+        };
+      }).sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+
+      // Pipedrive enrichment (same as REST path)
+      const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
+      if (pdToken) await enrichWithPipedrive(normalized, pdToken);
+
+      return new Response(JSON.stringify({
+        calls: normalized,
+        total: normalized.length,
+        meta: { source: "stream-liner-historic" },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ─── REST fallback (recent-feed, ~30 cap) ───
+    if (!apiKey) {
+      return new Response(JSON.stringify({
+        error: "Stream Liner historic failed and no fallback REST key configured",
+        detail: statsError,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const base = normalizeBase(baseUrl);
     const url = new URL(`${base}/calls`);
     if (fromDate) url.searchParams.set("fromDate", fromDate);
     if (toDate) url.searchParams.set("toDate", toDate);
