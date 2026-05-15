@@ -249,10 +249,3 @@ serve(async (req) => {
     });
   }
 });
-  } catch (error) {
-    console.error("telavox-calls error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
