@@ -10,6 +10,42 @@ function normalizeBase(input?: string): string {
   return b;
 }
 
+async function enrichWithPipedrive(calls: any[], pdToken: string) {
+  const uniquePhones = Array.from(new Set(calls.map((c) => c.phone).filter((p: string) => p && p !== "unknown")));
+  const cache = new Map<string, { contactName?: string; company?: string }>();
+  const lookup = async (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    const variants = Array.from(new Set([phone, digits, digits.slice(-8)])).filter(Boolean);
+    for (const term of variants) {
+      try {
+        const u = new URL("https://api.pipedrive.com/api/v2/persons/search");
+        u.searchParams.set("api_token", pdToken);
+        u.searchParams.set("term", term);
+        u.searchParams.set("fields", "phone");
+        u.searchParams.set("limit", "1");
+        const r = await fetch(u.toString());
+        if (!r.ok) continue;
+        const j = await r.json();
+        const item = j?.data?.items?.[0]?.item;
+        if (item) return { contactName: item.name, company: item.organization?.name };
+      } catch {}
+    }
+    return {};
+  };
+  const queue = [...uniquePhones];
+  const workers = Array.from({ length: 5 }, async () => {
+    while (queue.length) {
+      const p = queue.shift()!;
+      cache.set(p, await lookup(p));
+    }
+  });
+  await Promise.all(workers);
+  for (const c of calls) {
+    const hit = cache.get(c.phone);
+    if (hit) { c.contactName = hit.contactName; c.company = hit.company; }
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
