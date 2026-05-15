@@ -227,54 +227,28 @@ serve(async (req) => {
 
     // Enrich with Pipedrive contact lookup (name + company) by phone number.
     const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
-    if (pdToken) {
-      const uniquePhones = Array.from(new Set(deduped.map(c => c.phone).filter(p => p && p !== "unknown")));
-      const cache = new Map<string, { contactName?: string; company?: string }>();
-      const lookup = async (phone: string) => {
-        // Try as-is, then digits only, then last 8 digits (DK local) — Pipedrive search ignores spaces.
-        const digits = phone.replace(/\D/g, "");
-        const variants = Array.from(new Set([phone, digits, digits.slice(-8)])).filter(Boolean);
-        for (const term of variants) {
-          try {
-            const u = new URL("https://api.pipedrive.com/api/v2/persons/search");
-            u.searchParams.set("api_token", pdToken);
-            u.searchParams.set("term", term);
-            u.searchParams.set("fields", "phone");
-            u.searchParams.set("limit", "1");
-            const r = await fetch(u.toString());
-            if (!r.ok) continue;
-            const j = await r.json();
-            const item = j?.data?.items?.[0]?.item;
-            if (item) return { contactName: item.name, company: item.organization?.name };
-          } catch {}
-        }
-        return {};
-      };
-      // Limit concurrency to avoid rate limits.
-      const queue = [...uniquePhones];
-      const workers = Array.from({ length: 5 }, async () => {
-        while (queue.length) {
-          const p = queue.shift()!;
-          cache.set(p, await lookup(p));
-        }
-      });
-      await Promise.all(workers);
-      for (const c of deduped) {
-        const hit = cache.get(c.phone);
-        if (hit) { c.contactName = hit.contactName; c.company = hit.company; }
-      }
-    }
+    if (pdToken) await enrichWithPipedrive(deduped, pdToken);
 
     return new Response(JSON.stringify({
       calls: deduped,
       total: deduped.length,
       meta: {
+        source: "rest-recent-feed",
         mayBeIncomplete: deduped.length >= 30,
-        limitation: "Telavox call history only exposes a recent-call feed for the authenticated user, so totals can undercount busy date ranges.",
+        limitation: "Telavox REST /calls only exposes a recent-call feed (~30). Configure TELAVOX_STATS_TOKEN (Stream Liner Historic) for full historic counts.",
+        statsAttempted: !!statsError,
+        statsError: statsError || undefined,
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  } catch (error) {
+    console.error("telavox-calls error:", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
   } catch (error) {
     console.error("telavox-calls error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
