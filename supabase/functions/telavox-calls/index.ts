@@ -66,20 +66,20 @@ serve(async (req) => {
     let statsError: string | null = null;
 
     if (statsToken && fromDate && toDate) {
-      // Build ISO 8601 UTC range covering the full local day(s).
+      // ISO 8601 UTC range covering the full local day(s).
       const fromIso = `${fromDate}T00:00:00Z`;
       const toIso = `${toDate}T23:59:59Z`;
-      const query = `query Historic($from: DateTime!, $to: DateTime!, $cursor: String) {
-  calls(filter: { time: { start: { gte: $from, lte: $to } } }, first: 500, after: $cursor) {
-    nodes {
+      const query = `query Historic($filter: OverviewFilter, $first: Int!, $after: String) {
+  calls(filter: $filter, first: $first, after: $after) {
+    data {
       idCall
       callDirection
       answered
-      voicemail
       recorded
       terminatedCallReason
+      timestamp
       time { start end }
-      duration { total talk wait hold }
+      duration { total { total } talk { total } }
       customerTarget { number }
     }
     totalCount
@@ -91,18 +91,21 @@ serve(async (req) => {
         const aggregated: any[] = [];
         let cursor: string | null = null;
         let pages = 0;
-        while (pages < 20) {
+        while (pages < 50) {
           const r = await fetch("https://statistics-api.telavox.se/graphql", {
             method: "POST",
             headers: { Authorization: `Bearer ${statsToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ query, variables: { from: fromIso, to: toIso, cursor } }),
+            body: JSON.stringify({
+              query,
+              variables: { filter: { startDate: fromIso, endDate: toIso }, first: 500, after: cursor },
+            }),
           });
           const txt = await r.text();
           let json: any; try { json = JSON.parse(txt); } catch { throw new Error(`GraphQL non-JSON: ${txt.slice(0, 200)}`); }
           if (json.errors) throw new Error(`GraphQL: ${JSON.stringify(json.errors).slice(0, 400)}`);
           const conn = json?.data?.calls;
           if (!conn) throw new Error(`Unexpected GraphQL shape: ${txt.slice(0, 200)}`);
-          for (const n of (conn.nodes || [])) aggregated.push(n);
+          for (const n of (conn.data || [])) aggregated.push(n);
           if (!conn.hasNextPage || !conn.cursor) break;
           cursor = conn.cursor;
           pages++;
