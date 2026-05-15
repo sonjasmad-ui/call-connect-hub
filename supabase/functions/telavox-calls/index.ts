@@ -127,20 +127,20 @@ serve(async (req) => {
         const dt = new Date(startMs || Date.now());
         const date = dt.toISOString().slice(0, 10);
         const time = dt.toISOString().slice(11, 16);
-        const dur = c?.duration?.total || c?.duration?.talk || 0;
+        const dur = c?.duration?.total?.total ?? c?.duration?.talk?.total ?? 0;
         const dirRaw = String(c?.callDirection || "").toLowerCase();
         const direction = dirRaw.startsWith("in") ? "inbound" : "outbound";
         let status = "missed";
-        if (c?.voicemail) status = "voicemail";
-        else if (c?.answered) status = "answered";
+        if (c?.answered) status = "answered";
         else if (c?.terminatedCallReason === "busy" || c?.terminatedCallReason === "user_busy") status = "busy";
+        else if (c?.terminatedCallReason === "voicemail") status = "voicemail";
         return {
           id: c?.idCall || `${date}-${time}-${Math.random().toString(36).slice(2, 8)}`,
           date, time, direction,
           duration: dur,
           status,
           phone: c?.customerTarget?.number || "unknown",
-          recordingUrl: c?.recorded ? c.idCall : undefined,
+          recordingUrl: undefined, // recording IDs only available via REST endpoint
         };
       }).sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
