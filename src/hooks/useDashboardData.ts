@@ -39,6 +39,8 @@ export function useDashboardData(filters: DashboardFilters) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [emails, setEmails] = useState<Meeting[]>([]);
   const [linkedins, setLinkedins] = useState<Meeting[]>([]);
+  const [monthCalls, setMonthCalls] = useState<CallRecord[]>([]);
+  const [monthMeetings, setMonthMeetings] = useState<Meeting[]>([]);
   const [telavoxMeta, setTelavoxMeta] = useState<{ mayBeIncomplete?: boolean; limitation?: string } | null>(null);
   const [telavoxUsers, setTelavoxUsers] = useState<TelavoxUser[]>([]);
   const [pipedriveUsers, setPipedriveUsers] = useState<PipedriveUser[]>([]);
@@ -46,6 +48,15 @@ export function useDashboardData(filters: DashboardFilters) {
   const [usingLiveData, setUsingLiveData] = useState({ telavox: false, pipedrive: false });
   const [selectedTelavoxUser, setSelectedTelavoxUser] = useState<string>("all");
   const [selectedPipedriveUser, setSelectedPipedriveUser] = useState<string>("all");
+
+  const monthRange = (() => {
+    const t = new Date();
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    return {
+      start: fmt(new Date(t.getFullYear(), t.getMonth(), 1)),
+      end: fmt(t),
+    };
+  })();
 
   const loadUsers = useCallback(async () => {
     if (hasTelavoxConfig()) {
