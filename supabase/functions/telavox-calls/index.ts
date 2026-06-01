@@ -124,7 +124,7 @@ serve(async (req) => {
             headers: { Authorization: `Bearer ${statsToken}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               query,
-              variables: { filter: { startDate: fromIso, endDate: toIso }, first: 500, after: cursor },
+              variables: { filter: { startDate: fromIso.toISOString(), endDate: toIso.toISOString() }, first: 500, after: cursor },
             }),
           });
           const txt = await r.text();
