@@ -16,6 +16,11 @@ export interface MetricInputs {
   dateRange?: string;
   pipelineQuota?: number;
   avgDealValue?: number;
+  /** Month-to-date data — used by target widgets so they always reflect the current month. */
+  monthCalls?: CallRecord[];
+  monthMeetings?: Meeting[];
+  monthStartDate?: string;
+  monthEndDate?: string;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
