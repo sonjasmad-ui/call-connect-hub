@@ -131,9 +131,38 @@ export function useDashboardData(filters: DashboardFilters) {
       setLinkedins([]);
     }
 
+    // Month-to-date — used by target widgets so they always reflect the current month
+    // regardless of the dashboard's date-range filter.
+    const sameAsFilter = filters.startDate === monthRange.start && filters.endDate === monthRange.end;
+    if (sameAsFilter) {
+      // Reuse the data we just fetched.
+      // (set after state below to avoid race; safe to just call setters again)
+    }
+    try {
+      if (hasTelavoxConfig() && !sameAsFilter) {
+        const t = await fetchTelavoxCalls(monthRange.start, monthRange.end);
+        setMonthCalls(t.calls);
+      }
+    } catch (e) { console.warn("month calls fetch failed", e); }
+    try {
+      if (hasPipedriveConfig() && !sameAsFilter) {
+        const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
+        const m = await fetchPipedriveActivities(monthRange.start, monthRange.end, pdUserId, "meeting");
+        setMonthMeetings(m);
+      }
+    } catch (e) { console.warn("month meetings fetch failed", e); }
+
     setUsingLiveData(live);
     setLoading(false);
-  }, [filters.startDate, filters.endDate, selectedPipedriveUser]);
+  }, [filters.startDate, filters.endDate, selectedPipedriveUser, monthRange.start, monthRange.end]);
+
+  // When the active range IS the current month, mirror it into month state.
+  useEffect(() => {
+    if (filters.startDate === monthRange.start && filters.endDate === monthRange.end) {
+      setMonthCalls(calls);
+      setMonthMeetings(meetings);
+    }
+  }, [calls, meetings, filters.startDate, filters.endDate, monthRange.start, monthRange.end]);
 
   useEffect(() => {
     loadUsers();
