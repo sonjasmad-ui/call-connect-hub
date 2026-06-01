@@ -152,8 +152,8 @@ serve(async (req) => {
         const startMs = typeof c?.time?.start === "number" ? c.time.start
           : (c?.time?.start ? Date.parse(c.time.start) : 0);
         const dt = new Date(startMs || Date.now());
-        const date = dt.toISOString().slice(0, 10);
-        const time = dt.toISOString().slice(11, 16);
+        const date = localDateInTz(dt, tz);
+        const time = localTimeInTz(dt, tz);
         const dur = c?.duration?.total ?? c?.duration?.talk ?? 0;
         const dirRaw = String(c?.callDirection || "").toLowerCase();
         const direction = dirRaw.startsWith("in") ? "inbound" : "outbound";
@@ -167,18 +167,20 @@ serve(async (req) => {
           duration: dur,
           status,
           phone: c?.customerTarget?.number || "unknown",
-          recordingUrl: undefined, // recording IDs only available via REST endpoint
+          recordingUrl: undefined,
         };
-      }).sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+      })
+        // Trim the ±1 day expansion back to the user's requested local-date window.
+        .filter((c: any) => (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate))
+        .sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
-      // Pipedrive enrichment (same as REST path)
       const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
       if (pdToken) await enrichWithPipedrive(normalized, pdToken);
 
       return new Response(JSON.stringify({
         calls: normalized,
         total: normalized.length,
-        meta: { source: "stream-liner-historic" },
+        meta: { source: "stream-liner-historic", tz },
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
