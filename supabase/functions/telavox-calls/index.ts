@@ -77,7 +77,6 @@ serve(async (req) => {
       answered
       recorded
       terminatedCallReason
-      timestamp
       time { start end }
       duration { total }
       customerTarget { number }

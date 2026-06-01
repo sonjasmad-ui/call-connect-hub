@@ -44,12 +44,12 @@ export interface DashboardFilters {
 const _initialRange = (() => {
   const t = new Date();
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const s = new Date(t); s.setDate(s.getDate() - 29);
+  const s = new Date(t.getFullYear(), t.getMonth(), 1);
   return { startDate: fmt(s), endDate: fmt(t) };
 })();
 
 export const defaultFilters: DashboardFilters = {
-  datePreset: "last30",
+  datePreset: "thisMonth",
   startDate: _initialRange.startDate,
   endDate: _initialRange.endDate,
   direction: "all",

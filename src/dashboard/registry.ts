@@ -91,14 +91,14 @@ export const WIDGET_REGISTRY: Record<MetricKey, WidgetDefinition> = {
   },
   bookingTarget: {
     metric: "bookingTarget", category: "booking",
-    title: "Booking Target", description: "Progress to goal",
+    title: "Booking Target", description: "Month-to-date progress",
     supportedVisualizations: ["progress", "kpi"],
     defaultFormat: "integer", defaultLayout: { w: 6, h: 3 },
     tags: ["target", "goal"], accent: "rose", icon: "Trophy",
   },
   callTarget: {
     metric: "callTarget", category: "booking",
-    title: "Call Target", description: "Progress to goal",
+    title: "Call Target", description: "Month-to-date progress",
     supportedVisualizations: ["progress", "kpi"],
     defaultFormat: "integer", defaultLayout: { w: 6, h: 3 },
     tags: ["target", "goal"], accent: "blue", icon: "Flag",

@@ -16,6 +16,11 @@ export interface MetricInputs {
   dateRange?: string;
   pipelineQuota?: number;
   avgDealValue?: number;
+  /** Month-to-date data — used by target widgets so they always reflect the current month. */
+  monthCalls?: CallRecord[];
+  monthMeetings?: Meeting[];
+  monthStartDate?: string;
+  monthEndDate?: string;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -48,8 +53,17 @@ export function computeScalar(metric: string, input: MetricInputs): number {
     case "bookings":       return bookingsInPeriod;
     case "bookingRate":    return total > 0 ? (bookingsInPeriod / total) * 100 : 0;
     case "callsPerBooking":return bookingsInPeriod > 0 ? total / bookingsInPeriod : 0;
-    case "bookingTarget":  return bookingsInPeriod;
-    case "callTarget":     return total;
+    case "bookingTarget": {
+      const mm = input.monthMeetings;
+      const ms = input.monthStartDate ?? startDate;
+      const me = input.monthEndDate ?? endDate;
+      if (mm) return mm.filter(m => {
+        const d = m.createdDate || m.date;
+        return d >= ms && d <= me;
+      }).length;
+      return bookingsInPeriod;
+    }
+    case "callTarget":     return (input.monthCalls ?? calls).length;
     case "emailsSent":     return countIn(input.emails);
     case "linkedinSent":   return countIn(input.linkedins);
     case "activityPerDay": {

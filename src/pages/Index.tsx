@@ -30,6 +30,7 @@ export default function Index() {
 
   const {
     filteredCalls, meetings, emails, linkedins, loading, usingLiveData,
+    monthCalls, monthMeetings, monthStartDate, monthEndDate,
     telavoxMeta,
     telavoxUsers, pipedriveUsers,
     selectedTelavoxUser, selectedPipedriveUser,
@@ -48,12 +49,16 @@ export default function Index() {
     meetings,
     emails,
     linkedins,
+    monthCalls,
+    monthMeetings,
+    monthStartDate,
+    monthEndDate,
     startDate: filters.startDate,
     endDate: filters.endDate,
     bookingTarget,
     callTarget,
     dateRange: filters.datePreset,
-  }), [filteredCalls, meetings, emails, linkedins, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset]);
+  }), [filteredCalls, meetings, emails, linkedins, monthCalls, monthMeetings, monthStartDate, monthEndDate, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset]);
 
   const handleLock = () => {
     sessionStorage.removeItem("dashboard_access");
