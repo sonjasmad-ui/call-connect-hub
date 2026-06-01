@@ -15,7 +15,21 @@ serve(async (req) => {
   }
 
   try {
-    const { apiToken: bodyToken, baseUrl, startDate, endDate, userId, type } = await req.json();
+    const { apiToken: bodyToken, baseUrl, startDate, endDate, userId, type, tz: tzIn } = await req.json();
+    const tz = (tzIn && String(tzIn)) || "UTC";
+    const localDate = (iso: string): string => {
+      if (!iso) return "";
+      try {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(new Date(iso.includes("T") ? iso : iso.replace(" ", "T") + "Z"));
+        const y = parts.find(p => p.type === "year")?.value;
+        const m = parts.find(p => p.type === "month")?.value;
+        const d = parts.find(p => p.type === "day")?.value;
+        if (y && m && d) return `${y}-${m}-${d}`;
+      } catch {}
+      return iso.slice(0, 10);
+    };
     const apiToken = (bodyToken && String(bodyToken).trim()) || Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
 
     if (!apiToken) {
