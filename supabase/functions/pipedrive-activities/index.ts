@@ -83,13 +83,12 @@ serve(async (req) => {
     // Filter by add_time (creation date) within [startDate, endDate] if provided.
     let filteredByDate = (startDate && endDate)
       ? allActivities.filter((a: any) => {
-          const created = a.add_time ? a.add_time.slice(0, 10) : "";
+          const created = a.add_time ? localDate(a.add_time) : "";
           return created && created >= startDate && created <= endDate;
         })
       : allActivities;
 
     // For meetings only, exclude calendar-only events (no Pipedrive deal linked).
-    // Real "bookings" are activities tied to a deal — calendar imports have no deal_id.
     if (wantedType === "meeting") {
       filteredByDate = filteredByDate.filter((a: any) => !!a.deal_id);
     }
@@ -101,7 +100,7 @@ serve(async (req) => {
       company: a.org_name || "",
       date: a.due_date || "",
       time: a.due_time || "",
-      createdDate: a.add_time ? a.add_time.slice(0, 10) : a.due_date || "",
+      createdDate: a.add_time ? localDate(a.add_time) : (a.due_date || ""),
       pipedriveStage: a.deal_title || "Lead",
       dealValue: a.deal_id || undefined,
       done: a.done === 1,
@@ -109,7 +108,7 @@ serve(async (req) => {
       type: a.type,
     }));
 
-    return new Response(JSON.stringify({ meetings, total: meetings.length, fetched: allActivities.length }), {
+    return new Response(JSON.stringify({ meetings, total: meetings.length, fetched: allActivities.length, tz }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
