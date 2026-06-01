@@ -46,11 +46,36 @@ async function enrichWithPipedrive(calls: any[], pdToken: string) {
   }
 }
 
+function localDateInTz(date: Date, tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(date);
+    const y = parts.find(p => p.type === "year")?.value;
+    const m = parts.find(p => p.type === "month")?.value;
+    const d = parts.find(p => p.type === "day")?.value;
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  return date.toISOString().slice(0, 10);
+}
+function localTimeInTz(date: Date, tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(date);
+    const h = parts.find(p => p.type === "hour")?.value;
+    const m = parts.find(p => p.type === "minute")?.value;
+    if (h && m) return `${h}:${m}`;
+  } catch {}
+  return date.toISOString().slice(11, 16);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { apiKey: bodyKey, baseUrl, fromDate, toDate } = await req.json();
+    const { apiKey: bodyKey, baseUrl, fromDate, toDate, tz: tzIn } = await req.json();
+    const tz = (tzIn && String(tzIn)) || "UTC";
     const apiKey = (bodyKey && String(bodyKey).trim()) || Deno.env.get("TELAVOX_API_KEY") || "";
     const statsToken = (Deno.env.get("TELAVOX_STATS_TOKEN") || "").trim();
 
@@ -66,9 +91,12 @@ serve(async (req) => {
     let statsError: string | null = null;
 
     if (statsToken && fromDate && toDate) {
-      // ISO 8601 UTC range covering the full local day(s).
-      const fromIso = `${fromDate}T00:00:00Z`;
-      const toIso = `${toDate}T23:59:59Z`;
+      // Expand the UTC window by ±1 day so we don't lose calls that straddle
+      // local midnight in the user's timezone; we'll re-filter by local date below.
+      const fromIso = new Date(`${fromDate}T00:00:00Z`);
+      fromIso.setUTCDate(fromIso.getUTCDate() - 1);
+      const toIso = new Date(`${toDate}T23:59:59Z`);
+      toIso.setUTCDate(toIso.getUTCDate() + 1);
       const query = `query Historic($filter: OverviewFilter, $first: Int!, $after: String) {
   calls(filter: $filter, first: $first, after: $after) {
     data {
@@ -96,7 +124,7 @@ serve(async (req) => {
             headers: { Authorization: `Bearer ${statsToken}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               query,
-              variables: { filter: { startDate: fromIso, endDate: toIso }, first: 500, after: cursor },
+              variables: { filter: { startDate: fromIso.toISOString(), endDate: toIso.toISOString() }, first: 500, after: cursor },
             }),
           });
           const txt = await r.text();
@@ -124,8 +152,8 @@ serve(async (req) => {
         const startMs = typeof c?.time?.start === "number" ? c.time.start
           : (c?.time?.start ? Date.parse(c.time.start) : 0);
         const dt = new Date(startMs || Date.now());
-        const date = dt.toISOString().slice(0, 10);
-        const time = dt.toISOString().slice(11, 16);
+        const date = localDateInTz(dt, tz);
+        const time = localTimeInTz(dt, tz);
         const dur = c?.duration?.total ?? c?.duration?.talk ?? 0;
         const dirRaw = String(c?.callDirection || "").toLowerCase();
         const direction = dirRaw.startsWith("in") ? "inbound" : "outbound";
@@ -139,18 +167,20 @@ serve(async (req) => {
           duration: dur,
           status,
           phone: c?.customerTarget?.number || "unknown",
-          recordingUrl: undefined, // recording IDs only available via REST endpoint
+          recordingUrl: undefined,
         };
-      }).sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+      })
+        // Trim the ±1 day expansion back to the user's requested local-date window.
+        .filter((c: any) => (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate))
+        .sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
-      // Pipedrive enrichment (same as REST path)
       const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
       if (pdToken) await enrichWithPipedrive(normalized, pdToken);
 
       return new Response(JSON.stringify({
         calls: normalized,
         total: normalized.length,
-        meta: { source: "stream-liner-historic" },
+        meta: { source: "stream-liner-historic", tz },
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

@@ -55,6 +55,11 @@ async function invokeFunction(name: string, body: Record<string, unknown>) {
 
 // ── Telavox ──
 
+const tz = (() => {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }
+  catch { return "UTC"; }
+})();
+
 export async function fetchTelavoxCalls(fromDate: string, toDate: string) {
   const settings = getApiSettings();
   const data = await invokeFunction("telavox-calls", {
@@ -62,6 +67,7 @@ export async function fetchTelavoxCalls(fromDate: string, toDate: string) {
     baseUrl: settings.telavox_base_url || undefined,
     fromDate,
     toDate,
+    tz,
   });
   return {
     calls: data.calls as any[],
@@ -89,6 +95,7 @@ export async function fetchPipedriveActivities(startDate: string, endDate: strin
     endDate,
     userId: userId || undefined,
     type,
+    tz,
   });
   return data.meetings as any[];
 }
