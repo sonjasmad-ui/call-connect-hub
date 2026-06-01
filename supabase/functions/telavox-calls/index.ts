@@ -46,11 +46,36 @@ async function enrichWithPipedrive(calls: any[], pdToken: string) {
   }
 }
 
+function localDateInTz(date: Date, tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(date);
+    const y = parts.find(p => p.type === "year")?.value;
+    const m = parts.find(p => p.type === "month")?.value;
+    const d = parts.find(p => p.type === "day")?.value;
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  return date.toISOString().slice(0, 10);
+}
+function localTimeInTz(date: Date, tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(date);
+    const h = parts.find(p => p.type === "hour")?.value;
+    const m = parts.find(p => p.type === "minute")?.value;
+    if (h && m) return `${h}:${m}`;
+  } catch {}
+  return date.toISOString().slice(11, 16);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { apiKey: bodyKey, baseUrl, fromDate, toDate } = await req.json();
+    const { apiKey: bodyKey, baseUrl, fromDate, toDate, tz: tzIn } = await req.json();
+    const tz = (tzIn && String(tzIn)) || "UTC";
     const apiKey = (bodyKey && String(bodyKey).trim()) || Deno.env.get("TELAVOX_API_KEY") || "";
     const statsToken = (Deno.env.get("TELAVOX_STATS_TOKEN") || "").trim();
 
@@ -66,9 +91,12 @@ serve(async (req) => {
     let statsError: string | null = null;
 
     if (statsToken && fromDate && toDate) {
-      // ISO 8601 UTC range covering the full local day(s).
-      const fromIso = `${fromDate}T00:00:00Z`;
-      const toIso = `${toDate}T23:59:59Z`;
+      // Expand the UTC window by ±1 day so we don't lose calls that straddle
+      // local midnight in the user's timezone; we'll re-filter by local date below.
+      const fromIso = new Date(`${fromDate}T00:00:00Z`);
+      fromIso.setUTCDate(fromIso.getUTCDate() - 1);
+      const toIso = new Date(`${toDate}T23:59:59Z`);
+      toIso.setUTCDate(toIso.getUTCDate() + 1);
       const query = `query Historic($filter: OverviewFilter, $first: Int!, $after: String) {
   calls(filter: $filter, first: $first, after: $after) {
     data {
