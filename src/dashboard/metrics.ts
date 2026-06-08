@@ -21,6 +21,12 @@ export interface MetricInputs {
   monthMeetings?: Meeting[];
   monthStartDate?: string;
   monthEndDate?: string;
+  /** Per-month target overrides keyed as `${metric}:${YYYY-MM}` (e.g. "bookingTarget:2026-05"). */
+  monthlyTargets?: Record<string, number>;
+  /** Active YYYY-MM that target widgets should read/write against (anchored to the filter range). */
+  targetMonth?: string;
+  /** Called by target widgets when the user edits a target — persists it for `targetMonth`. */
+  onSaveMonthlyTarget?: (metric: "bookingTarget" | "callTarget", month: string, value: number) => void;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
