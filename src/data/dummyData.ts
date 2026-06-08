@@ -186,7 +186,8 @@ export function filterCalls(calls: CallRecord[], filters: DashboardFilters): Cal
 
 export function getDateRange(preset: string): { startDate: string; endDate: string } {
   const today = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const end = fmt(today);
 
   switch (preset) {
