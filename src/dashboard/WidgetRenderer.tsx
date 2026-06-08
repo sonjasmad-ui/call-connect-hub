@@ -372,11 +372,16 @@ function ProgressBody({
   onUpdateWidget?: (w: WidgetConfig) => void;
 }) {
   const value = computeScalar(widget.metric, inputs);
+  const isMonthly = widget.metric === "bookingTarget" || widget.metric === "callTarget";
+  const targetMonth = isMonthly ? (inputs.targetMonth || new Date().toISOString().slice(0, 7)) : undefined;
+  const monthlyOverride = isMonthly && targetMonth
+    ? inputs.monthlyTargets?.[`${widget.metric}:${targetMonth}`]
+    : undefined;
   const defaultTarget =
     widget.metric === "bookingTarget" ? inputs.bookingTarget :
     widget.metric === "callTarget" ? inputs.callTarget :
     100;
-  const target = (widget.options?.target as number | undefined) ?? defaultTarget;
+  const target = monthlyOverride ?? (widget.options?.target as number | undefined) ?? defaultTarget;
   const pct = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
   const remaining = Math.max(0, target - Math.round(value));
 
@@ -385,11 +390,15 @@ function ProgressBody({
 
   const save = () => {
     const next = parseInt(draft, 10);
-    if (!Number.isNaN(next) && next > 0 && onUpdateWidget) {
-      onUpdateWidget({
-        ...widget,
-        options: { ...(widget.options ?? {}), target: next },
-      });
+    if (!Number.isNaN(next) && next > 0) {
+      if (isMonthly && targetMonth && inputs.onSaveMonthlyTarget) {
+        inputs.onSaveMonthlyTarget(widget.metric as "bookingTarget" | "callTarget", targetMonth, next);
+      } else if (onUpdateWidget) {
+        onUpdateWidget({
+          ...widget,
+          options: { ...(widget.options ?? {}), target: next },
+        });
+      }
     }
     setEditing(false);
   };

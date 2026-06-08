@@ -21,6 +21,12 @@ export interface MetricInputs {
   monthMeetings?: Meeting[];
   monthStartDate?: string;
   monthEndDate?: string;
+  /** Per-month target overrides keyed as `${metric}:${YYYY-MM}` (e.g. "bookingTarget:2026-05"). */
+  monthlyTargets?: Record<string, number>;
+  /** Active YYYY-MM that target widgets should read/write against (anchored to the filter range). */
+  targetMonth?: string;
+  /** Called by target widgets when the user edits a target — persists it for `targetMonth`. */
+  onSaveMonthlyTarget?: (metric: "bookingTarget" | "callTarget", month: string, value: number) => void;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -54,16 +60,31 @@ export function computeScalar(metric: string, input: MetricInputs): number {
     case "bookingRate":    return total > 0 ? (bookingsInPeriod / total) * 100 : 0;
     case "callsPerBooking":return bookingsInPeriod > 0 ? total / bookingsInPeriod : 0;
     case "bookingTarget": {
-      const mm = input.monthMeetings;
-      const ms = input.monthStartDate ?? startDate;
-      const me = input.monthEndDate ?? endDate;
-      if (mm) return mm.filter(m => {
-        const d = m.createdDate || m.date;
-        return d >= ms && d <= me;
-      }).length;
+      const tm = input.targetMonth;
+      const nowMonth = (input.monthStartDate ?? "").slice(0, 7);
+      if (tm && tm === nowMonth && input.monthMeetings) {
+        const ms = input.monthStartDate ?? startDate;
+        const me = input.monthEndDate ?? endDate;
+        return input.monthMeetings.filter(m => {
+          const d = m.createdDate || m.date;
+          return d >= ms && d <= me;
+        }).length;
+      }
+      if (tm) {
+        return meetings.filter(m => {
+          const d = (m.createdDate || m.date) ?? "";
+          return d.slice(0, 7) === tm;
+        }).length;
+      }
       return bookingsInPeriod;
     }
-    case "callTarget":     return (input.monthCalls ?? calls).length;
+    case "callTarget": {
+      const tm = input.targetMonth;
+      const nowMonth = (input.monthStartDate ?? "").slice(0, 7);
+      if (tm && tm === nowMonth && input.monthCalls) return input.monthCalls.length;
+      if (tm) return calls.filter(c => (c.date || "").slice(0, 7) === tm).length;
+      return calls.length;
+    }
     case "emailsSent":     return countIn(input.emails);
     case "linkedinSent":   return countIn(input.linkedins);
     case "activityPerDay": {

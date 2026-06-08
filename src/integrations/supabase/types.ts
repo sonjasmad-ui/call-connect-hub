@@ -47,6 +47,30 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_targets: {
+        Row: {
+          id: string
+          metric: string
+          month: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          id?: string
+          metric: string
+          month: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          id?: string
+          metric?: string
+          month?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       shared_dashboard_meta: {
         Row: {
           key: string

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { loadAllMonthlyTargets, saveMonthlyTarget, monthKeyForRange } from "@/lib/monthlyTargets";
 import { useNavigate } from "react-router-dom";
 import {
   RefreshCw, Loader2, Wifi, WifiOff, Plus, Pencil, Check, LogOut, BarChart3,
@@ -44,6 +45,22 @@ export default function Index() {
     addWidget, updateWidget, removeWidget, setFeatured, setLayouts,
   } = useDashboards();
 
+  const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>({});
+  useEffect(() => { loadAllMonthlyTargets().then(setMonthlyTargets).catch(() => {}); }, []);
+
+  const targetMonth = useMemo(
+    () => monthKeyForRange(filters.startDate, filters.endDate),
+    [filters.startDate, filters.endDate],
+  );
+
+  const onSaveMonthlyTarget = useCallback(
+    (metric: "bookingTarget" | "callTarget", month: string, value: number) => {
+      setMonthlyTargets(prev => ({ ...prev, [`${metric}:${month}`]: value }));
+      saveMonthlyTarget(metric, month, value).catch(err => console.error("save target", err));
+    },
+    [],
+  );
+
   const inputs = useMemo(() => ({
     calls: filteredCalls,
     meetings,
@@ -58,7 +75,10 @@ export default function Index() {
     bookingTarget,
     callTarget,
     dateRange: filters.datePreset,
-  }), [filteredCalls, meetings, emails, linkedins, monthCalls, monthMeetings, monthStartDate, monthEndDate, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset]);
+    monthlyTargets,
+    targetMonth,
+    onSaveMonthlyTarget,
+  }), [filteredCalls, meetings, emails, linkedins, monthCalls, monthMeetings, monthStartDate, monthEndDate, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset, monthlyTargets, targetMonth, onSaveMonthlyTarget]);
 
   const handleLock = () => {
     sessionStorage.removeItem("dashboard_access");
