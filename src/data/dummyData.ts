@@ -43,7 +43,10 @@ export interface DashboardFilters {
 
 const _initialRange = (() => {
   const t = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  // Local-date formatter — avoid toISOString() because it shifts in non-UTC tzs and
+  // can land the start of "this month" on the last day of the previous month.
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const s = new Date(t.getFullYear(), t.getMonth(), 1);
   return { startDate: fmt(s), endDate: fmt(t) };
 })();
