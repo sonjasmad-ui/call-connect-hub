@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { loadAllMonthlyTargets, saveMonthlyTarget, monthKeyForRange } from "@/lib/monthlyTargets";
 import { useNavigate } from "react-router-dom";
 import {
   RefreshCw, Loader2, Wifi, WifiOff, Plus, Pencil, Check, LogOut, BarChart3,
