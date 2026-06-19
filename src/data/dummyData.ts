@@ -41,23 +41,21 @@ export interface DashboardFilters {
   status: string;
 }
 
-const _initialRange = (() => {
-  const t = new Date();
-  // Local-date formatter — avoid toISOString() because it shifts in non-UTC tzs and
-  // can land the start of "this month" on the last day of the previous month.
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const s = new Date(t.getFullYear(), t.getMonth(), 1);
-  return { startDate: fmt(s), endDate: fmt(t) };
-})();
+export const fmtLocalDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-export const defaultFilters: DashboardFilters = {
-  datePreset: "thisMonth",
-  startDate: _initialRange.startDate,
-  endDate: _initialRange.endDate,
-  direction: "all",
-  status: "all",
-};
+export function makeDefaultFilters(): DashboardFilters {
+  const range = getDateRange("thisMonth");
+  return {
+    datePreset: "thisMonth",
+    startDate: range.startDate,
+    endDate: range.endDate,
+    direction: "all",
+    status: "all",
+  };
+}
+
+export const defaultFilters: DashboardFilters = makeDefaultFilters();
 
 const phones = ["+45 20123456", "+45 31234567", "+45 42345678", "+45 53456789", "+45 60987654", "+45 71098765", "+45 82109876", "+45 93210987"];
 
@@ -124,7 +122,7 @@ export const dummyCalls = generateCalls();
 export const dummyMeetings = generateMeetings();
 
 export const defaultSavedViews: SavedView[] = [
-  { id: "v1", name: "Last 30 days", filters: defaultFilters, isDefault: true },
+  { id: "v1", name: "Current month", filters: defaultFilters, isDefault: true },
   { id: "v2", name: "This week", filters: { ...defaultFilters, datePreset: "last7", startDate: "2026-03-27", endDate: "2026-04-03" } },
   { id: "v3", name: "Outbound only", filters: { ...defaultFilters, direction: "outbound" } },
 ];
@@ -186,9 +184,7 @@ export function filterCalls(calls: CallRecord[], filters: DashboardFilters): Cal
 
 export function getDateRange(preset: string): { startDate: string; endDate: string } {
   const today = new Date();
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const end = fmt(today);
+  const end = fmtLocalDate(today);
 
   switch (preset) {
     case "today":
@@ -196,22 +192,22 @@ export function getDateRange(preset: string): { startDate: string; endDate: stri
     case "yesterday": {
       const y = new Date(today);
       y.setDate(y.getDate() - 1);
-      return { startDate: fmt(y), endDate: fmt(y) };
+      return { startDate: fmtLocalDate(y), endDate: fmtLocalDate(y) };
     }
     case "last7": {
       const s = new Date(today);
       s.setDate(s.getDate() - 6);
-      return { startDate: fmt(s), endDate: end };
+      return { startDate: fmtLocalDate(s), endDate: end };
     }
     case "last14": {
       const s = new Date(today);
       s.setDate(s.getDate() - 13);
-      return { startDate: fmt(s), endDate: end };
+      return { startDate: fmtLocalDate(s), endDate: end };
     }
     case "last30": {
       const s = new Date(today);
       s.setDate(s.getDate() - 29);
-      return { startDate: fmt(s), endDate: end };
+      return { startDate: fmtLocalDate(s), endDate: end };
     }
     case "thisMonth":
       return { startDate: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`, endDate: end };

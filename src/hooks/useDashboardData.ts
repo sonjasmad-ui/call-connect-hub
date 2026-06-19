@@ -11,6 +11,7 @@ import {
 import {
   dummyCalls,
   dummyMeetings,
+  fmtLocalDate,
   filterCalls,
   getOverviewStats,
   getDailyData,
@@ -51,10 +52,9 @@ export function useDashboardData(filters: DashboardFilters) {
 
   const monthRange = (() => {
     const t = new Date();
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
     return {
-      start: fmt(new Date(t.getFullYear(), t.getMonth(), 1)),
-      end: fmt(t),
+      start: fmtLocalDate(new Date(t.getFullYear(), t.getMonth(), 1)),
+      end: fmtLocalDate(t),
     };
   })();
 
