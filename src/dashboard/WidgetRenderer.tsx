@@ -23,7 +23,7 @@ import type { CallRecord, Meeting } from "@/data/dummyData";
 import type { WidgetConfig } from "./types";
 import { getWidgetDefinition, ACCENT_HSL } from "./registry";
 import {
-  computeScalar, computeTrend, computeBreakdown, computeTableRows,
+  computeScalar, computeTrend, computeBreakdown, computeTableRows, prorateBusinessDayTarget,
   type MetricInputs,
 } from "./metrics";
 import { formatValue } from "./format";
@@ -381,12 +381,15 @@ function ProgressBody({
     widget.metric === "bookingTarget" ? inputs.bookingTarget :
     widget.metric === "callTarget" ? inputs.callTarget :
     100;
-  const target = monthlyOverride ?? (widget.options?.target as number | undefined) ?? defaultTarget;
-  const pct = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
+  const monthlyTarget = monthlyOverride ?? (widget.options?.target as number | undefined) ?? defaultTarget;
+  const target = isMonthly
+    ? prorateBusinessDayTarget(widget.metric as "bookingTarget" | "callTarget", monthlyTarget, inputs)
+    : monthlyTarget;
+  const pct = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : value > 0 ? 100 : 0;
   const remaining = Math.max(0, target - Math.round(value));
 
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(target.toString());
+  const [draft, setDraft] = useState(monthlyTarget.toString());
 
   const save = () => {
     const next = parseInt(draft, 10);
@@ -432,9 +435,9 @@ function ProgressBody({
             </div>
           ) : (
             <button
-              onClick={() => { setDraft(target.toString()); setEditing(true); }}
+              onClick={() => { setDraft((isMonthly ? monthlyTarget : target).toString()); setEditing(true); }}
               className="widget-control inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
-              title="Edit target"
+              title={isMonthly ? "Edit monthly target" : "Edit target"}
             >
               {formatValue(target, widget.format)}
               <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />

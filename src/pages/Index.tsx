@@ -11,7 +11,7 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { MotivationalQuote } from "@/components/dashboard/MotivationalQuote";
 import { BookingsListDialog } from "@/components/dashboard/BookingsListDialog";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { defaultFilters, getDateRange, type DashboardFilters } from "@/data/dummyData";
+import { makeDefaultFilters, type DashboardFilters } from "@/data/dummyData";
 import { useDashboards } from "@/dashboard/useDashboards";
 import { DashboardSwitcher } from "@/dashboard/DashboardSwitcher";
 import { DashboardGrid } from "@/dashboard/DashboardGrid";
@@ -20,7 +20,7 @@ import { WidgetSettings } from "@/dashboard/WidgetSettings";
 import type { WidgetConfig } from "@/dashboard/types";
 
 export default function Index() {
-  const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
+  const [filters, setFilters] = useState<DashboardFilters>(() => makeDefaultFilters());
   const [bookingTarget] = useState(30);
   const [callTarget] = useState(3000);
   const [editMode, setEditMode] = useState(false);
@@ -47,24 +47,6 @@ export default function Index() {
 
   const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>({});
   useEffect(() => { loadAllMonthlyTargets().then(setMonthlyTargets).catch(() => {}); }, []);
-
-  useEffect(() => {
-    const currentMonth = getDateRange("thisMonth");
-    setFilters(prev => {
-      const isSameMonthRange = prev.datePreset === "thisMonth"
-        && prev.startDate === currentMonth.startDate
-        && prev.endDate === currentMonth.endDate;
-
-      if (isSameMonthRange) return prev;
-
-      return {
-        ...prev,
-        datePreset: "thisMonth",
-        startDate: currentMonth.startDate,
-        endDate: currentMonth.endDate,
-      };
-    });
-  }, []);
 
   const targetMonth = useMemo(
     () => monthKeyForRange(filters.startDate, filters.endDate),

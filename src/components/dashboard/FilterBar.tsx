@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { type DashboardFilters, getDateRange } from "@/data/dummyData";
+import { fmtLocalDate, type DashboardFilters, getDateRange } from "@/data/dummyData";
 
 interface FilterBarProps {
   filters: DashboardFilters;
@@ -39,8 +39,18 @@ export function FilterBar({
   onTelavoxUserChange,
   onPipedriveUserChange,
 }: FilterBarProps) {
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date(filters.startDate));
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date(filters.endDate));
+  const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return year && month && day ? new Date(year, month - 1, day) : undefined;
+  };
+
+  const [startDate, setStartDate] = useState<Date | undefined>(() => parseLocalDate(filters.startDate));
+  const [endDate, setEndDate] = useState<Date | undefined>(() => parseLocalDate(filters.endDate));
+
+  useEffect(() => {
+    setStartDate(parseLocalDate(filters.startDate));
+    setEndDate(parseLocalDate(filters.endDate));
+  }, [filters.startDate, filters.endDate]);
 
   const handlePresetChange = (preset: string) => {
     if (preset === "custom") {
@@ -54,14 +64,14 @@ export function FilterBar({
   const handleCustomStart = (date: Date | undefined) => {
     if (date) {
       setStartDate(date);
-      onChange({ ...filters, datePreset: "custom", startDate: date.toISOString().slice(0, 10) });
+      onChange({ ...filters, datePreset: "custom", startDate: fmtLocalDate(date) });
     }
   };
 
   const handleCustomEnd = (date: Date | undefined) => {
     if (date) {
       setEndDate(date);
-      onChange({ ...filters, datePreset: "custom", endDate: date.toISOString().slice(0, 10) });
+      onChange({ ...filters, datePreset: "custom", endDate: fmtLocalDate(date) });
     }
   };
 

@@ -59,32 +59,8 @@ export function computeScalar(metric: string, input: MetricInputs): number {
     case "bookings":       return bookingsInPeriod;
     case "bookingRate":    return total > 0 ? (bookingsInPeriod / total) * 100 : 0;
     case "callsPerBooking":return bookingsInPeriod > 0 ? total / bookingsInPeriod : 0;
-    case "bookingTarget": {
-      const tm = input.targetMonth;
-      const nowMonth = (input.monthStartDate ?? "").slice(0, 7);
-      if (tm && tm === nowMonth && input.monthMeetings) {
-        const ms = input.monthStartDate ?? startDate;
-        const me = input.monthEndDate ?? endDate;
-        return input.monthMeetings.filter(m => {
-          const d = m.createdDate || m.date;
-          return d >= ms && d <= me;
-        }).length;
-      }
-      if (tm) {
-        return meetings.filter(m => {
-          const d = (m.createdDate || m.date) ?? "";
-          return d.slice(0, 7) === tm;
-        }).length;
-      }
-      return bookingsInPeriod;
-    }
-    case "callTarget": {
-      const tm = input.targetMonth;
-      const nowMonth = (input.monthStartDate ?? "").slice(0, 7);
-      if (tm && tm === nowMonth && input.monthCalls) return input.monthCalls.length;
-      if (tm) return calls.filter(c => (c.date || "").slice(0, 7) === tm).length;
-      return calls.length;
-    }
+    case "bookingTarget": return bookingsInPeriod;
+    case "callTarget":    return calls.length;
     case "emailsSent":     return countIn(input.emails);
     case "linkedinSent":   return countIn(input.linkedins);
     case "activityPerDay": {
@@ -145,6 +121,66 @@ export function computeScalar(metric: string, input: MetricInputs): number {
 export function computeTarget(metric: string): number | null {
   // Returns the target denominator for progress widgets.
   return null;
+}
+
+function parseIsoDate(value: string): Date | null {
+  const [year, month, day] = value.split("-").map(Number);
+  return year && month && day ? new Date(year, month - 1, day) : null;
+}
+
+function businessDaysBetween(start: string, end: string): number {
+  const s = parseIsoDate(start);
+  const e = parseIsoDate(end);
+  if (!s || !e || s > e) return 0;
+
+  let count = 0;
+  for (const d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) count++;
+  }
+  return count;
+}
+
+function countBeforeRange(metric: "bookingTarget" | "callTarget", month: string, rangeStart: string, input: MetricInputs): number {
+  const currentMonth = (input.monthStartDate ?? "").slice(0, 7);
+  if (month !== currentMonth) return 0;
+
+  if (metric === "callTarget") {
+    return (input.monthCalls ?? []).filter(c => c.date >= `${month}-01` && c.date < rangeStart).length;
+  }
+
+  return (input.monthMeetings ?? []).filter(m => {
+    const d = m.createdDate || m.date;
+    return d >= `${month}-01` && d < rangeStart;
+  }).length;
+}
+
+export function prorateBusinessDayTarget(
+  metric: "bookingTarget" | "callTarget",
+  monthlyTarget: number,
+  input: MetricInputs,
+): number {
+  const month = input.targetMonth ?? input.startDate.slice(0, 7);
+  const [year, monthNumber] = month.split("-").map(Number);
+  if (!year || !monthNumber || monthlyTarget <= 0) return monthlyTarget;
+
+  const monthStart = `${month}-01`;
+  const monthEndDate = new Date(year, monthNumber, 0);
+  const monthEnd = `${month}-${String(monthEndDate.getDate()).padStart(2, "0")}`;
+
+  if (input.dateRange === "thisMonth" && input.startDate === monthStart) {
+    return monthlyTarget;
+  }
+
+  const rangeStart = input.startDate > monthStart ? input.startDate : monthStart;
+  const rangeEnd = input.endDate < monthEnd ? input.endDate : monthEnd;
+  const selectedBusinessDays = businessDaysBetween(rangeStart, rangeEnd);
+  const remainingBusinessDays = businessDaysBetween(rangeStart, monthEnd);
+  const alreadyDoneBeforeRange = countBeforeRange(metric, month, rangeStart, input);
+  const remainingTarget = Math.max(0, monthlyTarget - alreadyDoneBeforeRange);
+
+  if (remainingBusinessDays === 0 || selectedBusinessDays === 0) return 0;
+  return Math.round((remainingTarget / remainingBusinessDays) * selectedBusinessDays);
 }
 
 /** Trend metrics → array of { date, value } */
