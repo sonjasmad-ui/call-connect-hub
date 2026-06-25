@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import {
   hasTelavoxConfig,
@@ -168,15 +168,29 @@ export function useDashboardData(filters: DashboardFilters) {
     loadUsers();
   }, [loadUsers]);
 
+  const lastLoadRef = useRef<number>(0);
   useEffect(() => {
     loadData();
+    lastLoadRef.current = Date.now();
   }, [loadData]);
 
-  // Auto-refresh every 60s, and whenever the tab regains focus / becomes visible.
+  // Auto-refresh every 10 minutes, and on focus only if data is older than 5 min.
+  // (Pipedrive API token budget is shared company-wide; keep call volume low.)
   useEffect(() => {
-    const interval = setInterval(() => { loadData(); }, 60_000);
-    const onFocus = () => { loadData(); };
-    const onVisibility = () => { if (document.visibilityState === "visible") loadData(); };
+    const STALE_MS = 5 * 60_000;
+    const INTERVAL_MS = 10 * 60_000;
+    const maybeReload = () => {
+      if (Date.now() - lastLoadRef.current > STALE_MS) {
+        loadData();
+        lastLoadRef.current = Date.now();
+      }
+    };
+    const interval = setInterval(() => {
+      loadData();
+      lastLoadRef.current = Date.now();
+    }, INTERVAL_MS);
+    const onFocus = () => maybeReload();
+    const onVisibility = () => { if (document.visibilityState === "visible") maybeReload(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
