@@ -172,6 +172,20 @@ export function useDashboardData(filters: DashboardFilters) {
     loadData();
   }, [loadData]);
 
+  // Auto-refresh every 60s, and whenever the tab regains focus / becomes visible.
+  useEffect(() => {
+    const interval = setInterval(() => { loadData(); }, 60_000);
+    const onFocus = () => { loadData(); };
+    const onVisibility = () => { if (document.visibilityState === "visible") loadData(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [loadData]);
+
   const filteredCalls = filterCalls(calls, filters).filter(c => {
     if (selectedTelavoxUser !== "all") {
       // pass-through
