@@ -77,84 +77,76 @@ export function useDashboardData(filters: DashboardFilters) {
     }
   }, []);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const live = { telavox: false, pipedrive: false };
-
-    if (hasTelavoxConfig()) {
-      try {
-        const telavox = await fetchTelavoxCalls(filters.startDate, filters.endDate);
-        setCalls(telavox.calls);
-        setTelavoxMeta(telavox.meta || null);
-        live.telavox = true;
-      } catch (err: any) {
-        console.error("Telavox fetch failed, using dummy data:", err);
-        toast.error("Telavox: " + (err.message || "Failed to fetch calls"));
-        setCalls(dummyCalls);
-        setTelavoxMeta(null);
-      }
-    } else {
+  // ── Telavox calls only (cheap, safe to auto-refresh) ──
+  const loadCalls = useCallback(async () => {
+    if (!hasTelavoxConfig()) {
+      setCalls(dummyCalls);
+      setTelavoxMeta(null);
+      return;
+    }
+    try {
+      const telavox = await fetchTelavoxCalls(filters.startDate, filters.endDate);
+      setCalls(telavox.calls);
+      setTelavoxMeta(telavox.meta || null);
+      setUsingLiveData(prev => ({ ...prev, telavox: true }));
+    } catch (err: any) {
+      console.error("Telavox fetch failed, using dummy data:", err);
+      toast.error("Telavox: " + (err.message || "Failed to fetch calls"));
       setCalls(dummyCalls);
       setTelavoxMeta(null);
     }
+    // Month-to-date telavox (for target widgets) — only when the active range differs
+    const sameAsFilter = filters.startDate === monthRange.start && filters.endDate === monthRange.end;
+    if (!sameAsFilter) {
+      try {
+        const t = await fetchTelavoxCalls(monthRange.start, monthRange.end);
+        setMonthCalls(t.calls);
+      } catch (e) { console.warn("month calls fetch failed", e); }
+    }
+  }, [filters.startDate, filters.endDate, monthRange.start, monthRange.end]);
 
-    if (hasPipedriveConfig()) {
-      const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
-      try {
-        const liveMeetings = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "meeting");
-        setMeetings(liveMeetings);
-        live.pipedrive = true;
-      } catch (err: any) {
-        console.error("Pipedrive meetings fetch failed:", err);
-        toast.error("Pipedrive: " + (err.message || "Failed to fetch meetings"));
-        setMeetings(dummyMeetings);
-      }
-      // Emails (best-effort, silent on error)
-      try {
-        const liveEmails = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email");
-        setEmails(liveEmails);
-      } catch (err) {
-        console.warn("Pipedrive emails fetch failed:", err);
-        setEmails([]);
-      }
-      // LinkedIn (custom activity type — silent if not configured)
-      try {
-        const liveLinkedins = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin");
-        setLinkedins(liveLinkedins);
-      } catch (err) {
-        console.warn("Pipedrive linkedin fetch failed:", err);
-        setLinkedins([]);
-      }
-    } else {
+  // ── Pipedrive (token-budget sensitive — manual refresh only) ──
+  const loadPipedrive = useCallback(async () => {
+    if (!hasPipedriveConfig()) {
       setMeetings(dummyMeetings);
       setEmails([]);
       setLinkedins([]);
+      return;
     }
+    const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
+    try {
+      const liveMeetings = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "meeting");
+      setMeetings(liveMeetings);
+      setUsingLiveData(prev => ({ ...prev, pipedrive: true }));
+    } catch (err: any) {
+      console.error("Pipedrive meetings fetch failed:", err);
+      toast.error("Pipedrive: " + (err.message || "Failed to fetch meetings"));
+      setMeetings(dummyMeetings);
+    }
+    try {
+      const liveEmails = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email");
+      setEmails(liveEmails);
+    } catch (err) { console.warn("Pipedrive emails fetch failed:", err); setEmails([]); }
+    try {
+      const liveLinkedins = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin");
+      setLinkedins(liveLinkedins);
+    } catch (err) { console.warn("Pipedrive linkedin fetch failed:", err); setLinkedins([]); }
 
-    // Month-to-date — used by target widgets so they always reflect the current month
-    // regardless of the dashboard's date-range filter.
     const sameAsFilter = filters.startDate === monthRange.start && filters.endDate === monthRange.end;
-    if (sameAsFilter) {
-      // Reuse the data we just fetched.
-      // (set after state below to avoid race; safe to just call setters again)
-    }
-    try {
-      if (hasTelavoxConfig() && !sameAsFilter) {
-        const t = await fetchTelavoxCalls(monthRange.start, monthRange.end);
-        setMonthCalls(t.calls);
-      }
-    } catch (e) { console.warn("month calls fetch failed", e); }
-    try {
-      if (hasPipedriveConfig() && !sameAsFilter) {
-        const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
+    if (!sameAsFilter) {
+      try {
         const m = await fetchPipedriveActivities(monthRange.start, monthRange.end, pdUserId, "meeting");
         setMonthMeetings(m);
-      }
-    } catch (e) { console.warn("month meetings fetch failed", e); }
-
-    setUsingLiveData(live);
-    setLoading(false);
+      } catch (e) { console.warn("month meetings fetch failed", e); }
+    }
   }, [filters.startDate, filters.endDate, selectedPipedriveUser, monthRange.start, monthRange.end]);
+
+  // Manual refresh = both
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([loadCalls(), loadPipedrive()]);
+    setLoading(false);
+  }, [loadCalls, loadPipedrive]);
 
   // When the active range IS the current month, mirror it into month state.
   useEffect(() => {
@@ -164,35 +156,41 @@ export function useDashboardData(filters: DashboardFilters) {
     }
   }, [calls, meetings, filters.startDate, filters.endDate, monthRange.start, monthRange.end]);
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+  useEffect(() => { loadUsers(); }, [loadUsers]);
 
-  const lastLoadRef = useRef<number>(0);
+  // Initial load: both. Subsequent filter changes: both (one-shot per change).
+  const lastCallsRef = useRef<number>(0);
   useEffect(() => {
-    loadData();
-    lastLoadRef.current = Date.now();
-  }, [loadData]);
+    (async () => {
+      setLoading(true);
+      await Promise.all([loadCalls(), loadPipedrive()]);
+      setLoading(false);
+      lastCallsRef.current = Date.now();
+    })();
+  }, [loadCalls, loadPipedrive]);
 
-  // Refresh only when the tab regains focus AND data is older than 15 minutes.
-  // No periodic interval — Pipedrive's daily token budget is shared company-wide.
+  // Auto-refresh: ONLY Telavox calls. Pipedrive stays put until the user pulls refresh.
   useEffect(() => {
-    const STALE_MS = 15 * 60_000;
-    const maybeReload = () => {
-      if (Date.now() - lastLoadRef.current > STALE_MS) {
-        loadData();
-        lastLoadRef.current = Date.now();
+    const CALLS_INTERVAL = 60_000; // 1 min — Telavox calls live-update
+    const interval = setInterval(() => {
+      loadCalls();
+      lastCallsRef.current = Date.now();
+    }, CALLS_INTERVAL);
+    const onFocus = () => {
+      if (Date.now() - lastCallsRef.current > 30_000) {
+        loadCalls();
+        lastCallsRef.current = Date.now();
       }
     };
-    const onFocus = () => maybeReload();
-    const onVisibility = () => { if (document.visibilityState === "visible") maybeReload(); };
+    const onVisibility = () => { if (document.visibilityState === "visible") onFocus(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [loadData]);
+  }, [loadCalls]);
 
   const filteredCalls = filterCalls(calls, filters).filter(c => {
     if (selectedTelavoxUser !== "all") {
