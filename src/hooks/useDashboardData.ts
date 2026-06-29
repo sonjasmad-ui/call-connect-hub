@@ -174,27 +174,21 @@ export function useDashboardData(filters: DashboardFilters) {
     lastLoadRef.current = Date.now();
   }, [loadData]);
 
-  // Auto-refresh every 10 minutes, and on focus only if data is older than 5 min.
-  // (Pipedrive API token budget is shared company-wide; keep call volume low.)
+  // Refresh only when the tab regains focus AND data is older than 15 minutes.
+  // No periodic interval — Pipedrive's daily token budget is shared company-wide.
   useEffect(() => {
-    const STALE_MS = 5 * 60_000;
-    const INTERVAL_MS = 10 * 60_000;
+    const STALE_MS = 15 * 60_000;
     const maybeReload = () => {
       if (Date.now() - lastLoadRef.current > STALE_MS) {
         loadData();
         lastLoadRef.current = Date.now();
       }
     };
-    const interval = setInterval(() => {
-      loadData();
-      lastLoadRef.current = Date.now();
-    }, INTERVAL_MS);
     const onFocus = () => maybeReload();
     const onVisibility = () => { if (document.visibilityState === "visible") maybeReload(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };

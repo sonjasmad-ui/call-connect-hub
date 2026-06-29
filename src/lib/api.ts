@@ -86,8 +86,15 @@ export async function fetchTelavoxUsers() {
 
 // ── Pipedrive ──
 
+// In-memory cache to avoid hammering Pipedrive (shared company token budget).
+const pdCache = new Map<string, { ts: number; data: any }>();
+const PD_TTL_MS = 10 * 60_000;
+
 export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string) {
   const settings = getApiSettings();
+  const key = JSON.stringify({ startDate, endDate, userId: userId || 0, type: type || "meeting" });
+  const hit = pdCache.get(key);
+  if (hit && Date.now() - hit.ts < PD_TTL_MS) return hit.data as any[];
   const data = await invokeFunction("pipedrive-activities", {
     apiToken: settings.pipedrive_api_token || undefined,
     baseUrl: settings.pipedrive_base_url || undefined,
@@ -97,7 +104,9 @@ export async function fetchPipedriveActivities(startDate: string, endDate: strin
     type,
     tz,
   });
-  return data.meetings as any[];
+  const meetings = data.meetings as any[];
+  pdCache.set(key, { ts: Date.now(), data: meetings });
+  return meetings;
 }
 
 export async function fetchPipedriveUsers() {
