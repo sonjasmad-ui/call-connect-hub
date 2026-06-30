@@ -184,9 +184,6 @@ serve(async (req) => {
         .filter((c: any) => (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate))
         .sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
-      const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
-      if (pdToken) await enrichWithPipedrive(normalized, pdToken);
-
       return new Response(JSON.stringify({
         calls: normalized,
         total: normalized.length,
@@ -266,10 +263,6 @@ serve(async (req) => {
     deduped.sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
     console.log(`telavox-calls ← returned ${deduped.length} normalized records`);
-
-    // Enrich with Pipedrive contact lookup (name + company) by phone number.
-    const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
-    if (pdToken) await enrichWithPipedrive(deduped, pdToken);
 
     return new Response(JSON.stringify({
       calls: deduped,
