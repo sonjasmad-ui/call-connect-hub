@@ -86,27 +86,57 @@ export async function fetchTelavoxUsers() {
 
 // ── Pipedrive ──
 
-// In-memory cache to avoid hammering Pipedrive (shared company token budget).
+// In-memory + localStorage cache. Pipedrive's daily token budget is shared company-wide,
+// so on 429 we fall back to the last successful response rather than wiping the UI.
 const pdCache = new Map<string, { ts: number; data: any }>();
 const PD_TTL_MS = 10 * 60_000;
+const PD_LS_PREFIX = "pd_cache_v1:";
+
+function pdCacheGet(key: string): { ts: number; data: any } | null {
+  const mem = pdCache.get(key);
+  if (mem) return mem;
+  try {
+    const raw = localStorage.getItem(PD_LS_PREFIX + key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      pdCache.set(key, parsed);
+      return parsed;
+    }
+  } catch {}
+  return null;
+}
+function pdCacheSet(key: string, data: any) {
+  const entry = { ts: Date.now(), data };
+  pdCache.set(key, entry);
+  try { localStorage.setItem(PD_LS_PREFIX + key, JSON.stringify(entry)); } catch {}
+}
 
 export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string) {
   const settings = getApiSettings();
   const key = JSON.stringify({ startDate, endDate, userId: userId || 0, type: type || "meeting" });
-  const hit = pdCache.get(key);
+  const hit = pdCacheGet(key);
   if (hit && Date.now() - hit.ts < PD_TTL_MS) return hit.data as any[];
-  const data = await invokeFunction("pipedrive-activities", {
-    apiToken: settings.pipedrive_api_token || undefined,
-    baseUrl: settings.pipedrive_base_url || undefined,
-    startDate,
-    endDate,
-    userId: userId || undefined,
-    type,
-    tz,
-  });
-  const meetings = data.meetings as any[];
-  pdCache.set(key, { ts: Date.now(), data: meetings });
-  return meetings;
+  try {
+    const data = await invokeFunction("pipedrive-activities", {
+      apiToken: settings.pipedrive_api_token || undefined,
+      baseUrl: settings.pipedrive_base_url || undefined,
+      startDate,
+      endDate,
+      userId: userId || undefined,
+      type,
+      tz,
+    });
+    const meetings = data.meetings as any[];
+    pdCacheSet(key, meetings);
+    return meetings;
+  } catch (err) {
+    // Network/429/etc — serve stale cache (any age) if available so the dashboard keeps showing real data.
+    if (hit) {
+      console.warn("Pipedrive call failed, using stale cache:", err);
+      return hit.data as any[];
+    }
+    throw err;
+  }
 }
 
 export async function fetchPipedriveUsers() {
