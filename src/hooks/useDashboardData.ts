@@ -6,7 +6,7 @@ import {
   fetchTelavoxCalls,
   fetchTelavoxUsers,
   fetchPipedriveActivities,
-  fetchPipedriveUsers,
+  getCachedPipedriveActivities,
 } from "@/lib/api";
 import {
   dummyCalls,
@@ -67,14 +67,6 @@ export function useDashboardData(filters: DashboardFilters) {
         console.warn("Failed to load Telavox users:", err);
       }
     }
-    if (hasPipedriveConfig()) {
-      try {
-        const users = await fetchPipedriveUsers();
-        setPipedriveUsers(users.filter(u => u.active));
-      } catch (err) {
-        console.warn("Failed to load Pipedrive users:", err);
-      }
-    }
   }, []);
 
   // ── Telavox calls only (cheap, safe to auto-refresh) ──
@@ -106,6 +98,22 @@ export function useDashboardData(filters: DashboardFilters) {
   }, [filters.startDate, filters.endDate, monthRange.start, monthRange.end]);
 
   // ── Pipedrive (token-budget sensitive — manual refresh only) ──
+  const loadCachedPipedrive = useCallback(() => {
+    const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
+    const cachedMeetings = getCachedPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "meeting");
+    const cachedEmails = getCachedPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email");
+    const cachedLinkedins = getCachedPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin");
+    if (cachedMeetings) setMeetings(cachedMeetings);
+    if (cachedEmails) setEmails(cachedEmails);
+    if (cachedLinkedins) setLinkedins(cachedLinkedins);
+
+    const sameAsFilter = filters.startDate === monthRange.start && filters.endDate === monthRange.end;
+    if (!sameAsFilter) {
+      const cachedMonthMeetings = getCachedPipedriveActivities(monthRange.start, monthRange.end, pdUserId, "meeting");
+      if (cachedMonthMeetings) setMonthMeetings(cachedMonthMeetings);
+    }
+  }, [filters.startDate, filters.endDate, selectedPipedriveUser, monthRange.start, monthRange.end]);
+
   const loadPipedrive = useCallback(async () => {
     if (!hasPipedriveConfig()) {
       setMeetings(dummyMeetings);
@@ -163,16 +171,17 @@ export function useDashboardData(filters: DashboardFilters) {
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
-  // Initial load: both. Subsequent filter changes: both (one-shot per change).
+  // Initial load/filter changes: Telavox live + Pipedrive cache only. Pipedrive API is manual refresh only.
   const lastCallsRef = useRef<number>(0);
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await Promise.all([loadCalls(), loadPipedrive()]);
+      loadCachedPipedrive();
+      await loadCalls();
       setLoading(false);
       lastCallsRef.current = Date.now();
     })();
-  }, [loadCalls, loadPipedrive]);
+  }, [loadCalls, loadCachedPipedrive]);
 
   // Auto-refresh: ONLY Telavox calls. Pipedrive stays put until the user pulls refresh.
   useEffect(() => {

@@ -92,6 +92,10 @@ const pdCache = new Map<string, { ts: number; data: any }>();
 const PD_TTL_MS = 10 * 60_000;
 const PD_LS_PREFIX = "pd_cache_v1:";
 
+function pdActivitiesKey(startDate: string, endDate: string, userId?: number, type?: string) {
+  return JSON.stringify({ startDate, endDate, userId: userId || 0, type: type || "meeting" });
+}
+
 function pdCacheGet(key: string): { ts: number; data: any } | null {
   const mem = pdCache.get(key);
   if (mem) return mem;
@@ -113,7 +117,7 @@ function pdCacheSet(key: string, data: any) {
 
 export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string) {
   const settings = getApiSettings();
-  const key = JSON.stringify({ startDate, endDate, userId: userId || 0, type: type || "meeting" });
+  const key = pdActivitiesKey(startDate, endDate, userId, type);
   const hit = pdCacheGet(key);
   if (hit && Date.now() - hit.ts < PD_TTL_MS) return hit.data as any[];
   try {
@@ -137,6 +141,10 @@ export async function fetchPipedriveActivities(startDate: string, endDate: strin
     }
     throw err;
   }
+}
+
+export function getCachedPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string) {
+  return (pdCacheGet(pdActivitiesKey(startDate, endDate, userId, type))?.data as any[] | undefined) || null;
 }
 
 export async function fetchPipedriveUsers() {

@@ -10,52 +10,6 @@ function normalizeBase(input?: string): string {
   return b;
 }
 
-// Module-level cache shared across invocations of this edge function instance.
-// Cuts repeated Pipedrive persons/search calls dramatically.
-const phoneCache = new Map<string, { contactName?: string; company?: string; ts: number }>();
-const PHONE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-async function enrichWithPipedrive(calls: any[], pdToken: string) {
-  const uniquePhones = Array.from(new Set(calls.map((c) => c.phone).filter((p: string) => p && p !== "unknown")));
-  const now = Date.now();
-  const toLookup: string[] = [];
-  for (const p of uniquePhones) {
-    const hit = phoneCache.get(p);
-    if (!hit || now - hit.ts > PHONE_TTL_MS) toLookup.push(p);
-  }
-  const lookup = async (phone: string) => {
-    // Only 1 variant (last 8 digits) to minimise token spend.
-    const digits = phone.replace(/\D/g, "");
-    const term = digits.slice(-8) || digits || phone;
-    try {
-      const u = new URL("https://api.pipedrive.com/api/v2/persons/search");
-      u.searchParams.set("api_token", pdToken);
-      u.searchParams.set("term", term);
-      u.searchParams.set("fields", "phone");
-      u.searchParams.set("limit", "1");
-      const r = await fetch(u.toString());
-      if (!r.ok) return {};
-      const j = await r.json();
-      const item = j?.data?.items?.[0]?.item;
-      if (item) return { contactName: item.name, company: item.organization?.name };
-    } catch {}
-    return {};
-  };
-  const queue = [...toLookup];
-  const workers = Array.from({ length: 3 }, async () => {
-    while (queue.length) {
-      const p = queue.shift()!;
-      const res = await lookup(p);
-      phoneCache.set(p, { ...res, ts: Date.now() });
-    }
-  });
-  await Promise.all(workers);
-  for (const c of calls) {
-    const hit = phoneCache.get(c.phone);
-    if (hit) { c.contactName = hit.contactName; c.company = hit.company; }
-  }
-}
-
 function localDateInTz(date: Date, tz: string): string {
   try {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -184,9 +138,6 @@ serve(async (req) => {
         .filter((c: any) => (!fromDate || c.date >= fromDate) && (!toDate || c.date <= toDate))
         .sort((a: any, b: any) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
-      const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
-      if (pdToken) await enrichWithPipedrive(normalized, pdToken);
-
       return new Response(JSON.stringify({
         calls: normalized,
         total: normalized.length,
@@ -266,10 +217,6 @@ serve(async (req) => {
     deduped.sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
 
     console.log(`telavox-calls ← returned ${deduped.length} normalized records`);
-
-    // Enrich with Pipedrive contact lookup (name + company) by phone number.
-    const pdToken = Deno.env.get("PIPEDRIVE_API_TOKEN") || "";
-    if (pdToken) await enrichWithPipedrive(deduped, pdToken);
 
     return new Response(JSON.stringify({
       calls: deduped,
