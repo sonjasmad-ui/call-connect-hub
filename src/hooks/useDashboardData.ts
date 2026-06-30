@@ -120,17 +120,22 @@ export function useDashboardData(filters: DashboardFilters) {
       setUsingLiveData(prev => ({ ...prev, pipedrive: true }));
     } catch (err: any) {
       console.error("Pipedrive meetings fetch failed:", err);
-      toast.error("Pipedrive: " + (err.message || "Failed to fetch meetings"));
-      setMeetings(dummyMeetings);
+      const msg = String(err?.message || "");
+      if (msg.includes("429") || msg.toLowerCase().includes("budget")) {
+        toast.error("Pipedrive daily API budget reached — showing last cached bookings. Resets at midnight UTC.");
+      } else {
+        toast.error("Pipedrive: " + (err.message || "Failed to fetch meetings"));
+      }
+      // Keep whatever we already had (cache/previous state) instead of wiping to dummy.
     }
     try {
       const liveEmails = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email");
       setEmails(liveEmails);
-    } catch (err) { console.warn("Pipedrive emails fetch failed:", err); setEmails([]); }
+    } catch (err) { console.warn("Pipedrive emails fetch failed:", err); /* keep prev */ }
     try {
       const liveLinkedins = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin");
       setLinkedins(liveLinkedins);
-    } catch (err) { console.warn("Pipedrive linkedin fetch failed:", err); setLinkedins([]); }
+    } catch (err) { console.warn("Pipedrive linkedin fetch failed:", err); /* keep prev */ }
 
     const sameAsFilter = filters.startDate === monthRange.start && filters.endDate === monthRange.end;
     if (!sameAsFilter) {
