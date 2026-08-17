@@ -53,6 +53,12 @@ export default function Index() {
     [filters.startDate, filters.endDate],
   );
 
+  /** When the filter is a single day, target widgets edit/read that day's blitz target. */
+  const targetDay = useMemo(
+    () => (filters.startDate && filters.startDate === filters.endDate ? filters.startDate : undefined),
+    [filters.startDate, filters.endDate],
+  );
+
   const onSaveMonthlyTarget = useCallback(
     (metric: "bookingTarget" | "callTarget", month: string, value: number) => {
       setMonthlyTargets(prev => ({ ...prev, [`${metric}:${month}`]: value }));
@@ -77,8 +83,10 @@ export default function Index() {
     dateRange: filters.datePreset,
     monthlyTargets,
     targetMonth,
+    targetDay,
     onSaveMonthlyTarget,
-  }), [filteredCalls, meetings, emails, linkedins, monthCalls, monthMeetings, monthStartDate, monthEndDate, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset, monthlyTargets, targetMonth, onSaveMonthlyTarget]);
+  }), [filteredCalls, meetings, emails, linkedins, monthCalls, monthMeetings, monthStartDate, monthEndDate, filters.startDate, filters.endDate, bookingTarget, callTarget, filters.datePreset, monthlyTargets, targetMonth, targetDay, onSaveMonthlyTarget]);
+
 
   const handleLock = () => {
     sessionStorage.removeItem("dashboard_access");
