@@ -162,9 +162,16 @@ export function prorateBusinessDayTarget(
   monthlyTarget: number,
   input: MetricInputs,
 ): number {
+  // Explicit per-day (call blitz) target wins over prorated monthly pacing.
+  if (input.targetDay) {
+    const dayOverride = input.monthlyTargets?.[`${metric}:${input.targetDay}`];
+    if (typeof dayOverride === "number" && dayOverride > 0) return dayOverride;
+  }
+
   const month = input.targetMonth ?? input.startDate.slice(0, 7);
   const [year, monthNumber] = month.split("-").map(Number);
   if (!year || !monthNumber || monthlyTarget <= 0) return monthlyTarget;
+
 
   const monthStart = `${month}-01`;
   const monthEndDate = new Date(year, monthNumber, 0);
