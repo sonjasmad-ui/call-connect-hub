@@ -115,11 +115,11 @@ function pdCacheSet(key: string, data: any) {
   try { localStorage.setItem(PD_LS_PREFIX + key, JSON.stringify(entry)); } catch {}
 }
 
-export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string) {
+export async function fetchPipedriveActivities(startDate: string, endDate: string, userId?: number, type?: string, force = false) {
   const settings = getApiSettings();
   const key = pdActivitiesKey(startDate, endDate, userId, type);
   const hit = pdCacheGet(key);
-  if (hit && Date.now() - hit.ts < PD_TTL_MS) return hit.data as any[];
+  if (!force && hit && Date.now() - hit.ts < PD_TTL_MS) return hit.data as any[];
   try {
     const data = await invokeFunction("pipedrive-activities", {
       apiToken: settings.pipedrive_api_token || undefined,
