@@ -374,8 +374,12 @@ function ProgressBody({
   const value = computeScalar(widget.metric, inputs);
   const isMonthly = widget.metric === "bookingTarget" || widget.metric === "callTarget";
   const targetMonth = isMonthly ? (inputs.targetMonth || new Date().toISOString().slice(0, 7)) : undefined;
+  const targetDay = isMonthly ? inputs.targetDay : undefined;
   const monthlyOverride = isMonthly && targetMonth
     ? inputs.monthlyTargets?.[`${widget.metric}:${targetMonth}`]
+    : undefined;
+  const dayOverride = targetDay
+    ? inputs.monthlyTargets?.[`${widget.metric}:${targetDay}`]
     : undefined;
   const defaultTarget =
     widget.metric === "bookingTarget" ? inputs.bookingTarget :
@@ -394,8 +398,10 @@ function ProgressBody({
   const save = () => {
     const next = parseInt(draft, 10);
     if (!Number.isNaN(next) && next > 0) {
-      if (isMonthly && targetMonth && inputs.onSaveMonthlyTarget) {
-        inputs.onSaveMonthlyTarget(widget.metric as "bookingTarget" | "callTarget", targetMonth, next);
+      if (isMonthly && inputs.onSaveMonthlyTarget) {
+        // Single-day view → store a per-day blitz target; otherwise the monthly budget.
+        const key = targetDay ?? targetMonth;
+        if (key) inputs.onSaveMonthlyTarget(widget.metric as "bookingTarget" | "callTarget", key, next);
       } else if (onUpdateWidget) {
         onUpdateWidget({
           ...widget,
@@ -405,6 +411,7 @@ function ProgressBody({
     }
     setEditing(false);
   };
+
 
   return (
     <div className="h-full flex flex-col justify-center gap-2.5">
