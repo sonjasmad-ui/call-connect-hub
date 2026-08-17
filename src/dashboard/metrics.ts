@@ -25,6 +25,8 @@ export interface MetricInputs {
   monthlyTargets?: Record<string, number>;
   /** Active YYYY-MM that target widgets should read/write against (anchored to the filter range). */
   targetMonth?: string;
+  /** Active YYYY-MM-DD when the filter is a single day — enables per-day (call blitz) targets. */
+  targetDay?: string;
   /** Called by target widgets when the user edits a target — persists it for `targetMonth`. */
   onSaveMonthlyTarget?: (metric: "bookingTarget" | "callTarget", month: string, value: number) => void;
 }
