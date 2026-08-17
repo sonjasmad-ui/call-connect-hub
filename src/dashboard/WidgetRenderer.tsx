@@ -374,8 +374,12 @@ function ProgressBody({
   const value = computeScalar(widget.metric, inputs);
   const isMonthly = widget.metric === "bookingTarget" || widget.metric === "callTarget";
   const targetMonth = isMonthly ? (inputs.targetMonth || new Date().toISOString().slice(0, 7)) : undefined;
+  const targetDay = isMonthly ? inputs.targetDay : undefined;
   const monthlyOverride = isMonthly && targetMonth
     ? inputs.monthlyTargets?.[`${widget.metric}:${targetMonth}`]
+    : undefined;
+  const dayOverride = targetDay
+    ? inputs.monthlyTargets?.[`${widget.metric}:${targetDay}`]
     : undefined;
   const defaultTarget =
     widget.metric === "bookingTarget" ? inputs.bookingTarget :
@@ -394,8 +398,10 @@ function ProgressBody({
   const save = () => {
     const next = parseInt(draft, 10);
     if (!Number.isNaN(next) && next > 0) {
-      if (isMonthly && targetMonth && inputs.onSaveMonthlyTarget) {
-        inputs.onSaveMonthlyTarget(widget.metric as "bookingTarget" | "callTarget", targetMonth, next);
+      if (isMonthly && inputs.onSaveMonthlyTarget) {
+        // Single-day view → store a per-day blitz target; otherwise the monthly budget.
+        const key = targetDay ?? targetMonth;
+        if (key) inputs.onSaveMonthlyTarget(widget.metric as "bookingTarget" | "callTarget", key, next);
       } else if (onUpdateWidget) {
         onUpdateWidget({
           ...widget,
@@ -405,6 +411,7 @@ function ProgressBody({
     }
     setEditing(false);
   };
+
 
   return (
     <div className="h-full flex flex-col justify-center gap-2.5">
@@ -435,9 +442,9 @@ function ProgressBody({
             </div>
           ) : (
             <button
-              onClick={() => { setDraft((isMonthly ? monthlyTarget : target).toString()); setEditing(true); }}
+              onClick={() => { setDraft((targetDay ? target : isMonthly ? monthlyTarget : target).toString()); setEditing(true); }}
               className="widget-control inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
-              title={isMonthly ? "Edit monthly target" : "Edit target"}
+              title={targetDay ? "Set a target just for this day (call blitz)" : isMonthly ? "Edit monthly target" : "Edit target"}
             >
               {formatValue(target, widget.format)}
               <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -462,11 +469,27 @@ function ProgressBody({
         />
       </div>
 
-      <p className="text-[11px] text-muted-foreground italic">
-        {remaining > 0
-          ? `${remaining} to go — ${getEncouragement(pct)}`
-          : `🎉 ${getEncouragement(pct)}`}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground italic truncate">
+          {remaining > 0
+            ? `${remaining} to go — ${getEncouragement(pct)}`
+            : `🎉 ${getEncouragement(pct)}`}
+        </p>
+        {targetDay && (
+          dayOverride ? (
+            <button
+              onClick={() => inputs.onSaveMonthlyTarget?.(widget.metric as "bookingTarget" | "callTarget", targetDay, 0)}
+              className="widget-control shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground hover:text-foreground"
+              title="Remove this day's blitz target and go back to monthly pacing"
+            >
+              Blitz ✕
+            </button>
+          ) : (
+            <span className="shrink-0 text-[10px] text-muted-foreground/70">paced</span>
+          )
+        )}
+      </div>
+
     </div>
   );
 }

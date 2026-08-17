@@ -25,6 +25,8 @@ export interface MetricInputs {
   monthlyTargets?: Record<string, number>;
   /** Active YYYY-MM that target widgets should read/write against (anchored to the filter range). */
   targetMonth?: string;
+  /** Active YYYY-MM-DD when the filter is a single day — enables per-day (call blitz) targets. */
+  targetDay?: string;
   /** Called by target widgets when the user edits a target — persists it for `targetMonth`. */
   onSaveMonthlyTarget?: (metric: "bookingTarget" | "callTarget", month: string, value: number) => void;
 }
@@ -160,9 +162,16 @@ export function prorateBusinessDayTarget(
   monthlyTarget: number,
   input: MetricInputs,
 ): number {
+  // Explicit per-day (call blitz) target wins over prorated monthly pacing.
+  if (input.targetDay) {
+    const dayOverride = input.monthlyTargets?.[`${metric}:${input.targetDay}`];
+    if (typeof dayOverride === "number" && dayOverride > 0) return dayOverride;
+  }
+
   const month = input.targetMonth ?? input.startDate.slice(0, 7);
   const [year, monthNumber] = month.split("-").map(Number);
   if (!year || !monthNumber || monthlyTarget <= 0) return monthlyTarget;
+
 
   const monthStart = `${month}-01`;
   const monthEndDate = new Date(year, monthNumber, 0);
