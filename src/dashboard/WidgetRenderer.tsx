@@ -442,9 +442,9 @@ function ProgressBody({
             </div>
           ) : (
             <button
-              onClick={() => { setDraft((isMonthly ? monthlyTarget : target).toString()); setEditing(true); }}
+              onClick={() => { setDraft((targetDay ? target : isMonthly ? monthlyTarget : target).toString()); setEditing(true); }}
               className="widget-control inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group"
-              title={isMonthly ? "Edit monthly target" : "Edit target"}
+              title={targetDay ? "Set a target just for this day (call blitz)" : isMonthly ? "Edit monthly target" : "Edit target"}
             >
               {formatValue(target, widget.format)}
               <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -469,11 +469,27 @@ function ProgressBody({
         />
       </div>
 
-      <p className="text-[11px] text-muted-foreground italic">
-        {remaining > 0
-          ? `${remaining} to go — ${getEncouragement(pct)}`
-          : `🎉 ${getEncouragement(pct)}`}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground italic truncate">
+          {remaining > 0
+            ? `${remaining} to go — ${getEncouragement(pct)}`
+            : `🎉 ${getEncouragement(pct)}`}
+        </p>
+        {targetDay && (
+          dayOverride ? (
+            <button
+              onClick={() => inputs.onSaveMonthlyTarget?.(widget.metric as "bookingTarget" | "callTarget", targetDay, 0)}
+              className="widget-control shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground hover:text-foreground"
+              title="Remove this day's blitz target and go back to monthly pacing"
+            >
+              Blitz ✕
+            </button>
+          ) : (
+            <span className="shrink-0 text-[10px] text-muted-foreground/70">paced</span>
+          )
+        )}
+      </div>
+
     </div>
   );
 }
