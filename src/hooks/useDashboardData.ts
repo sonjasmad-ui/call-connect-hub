@@ -114,7 +114,7 @@ export function useDashboardData(filters: DashboardFilters) {
     }
   }, [filters.startDate, filters.endDate, selectedPipedriveUser, monthRange.start, monthRange.end]);
 
-  const loadPipedrive = useCallback(async () => {
+  const loadPipedrive = useCallback(async (force = false) => {
     if (!hasPipedriveConfig()) {
       setMeetings(dummyMeetings);
       setEmails([]);
@@ -123,7 +123,7 @@ export function useDashboardData(filters: DashboardFilters) {
     }
     const pdUserId = selectedPipedriveUser !== "all" ? Number(selectedPipedriveUser) : undefined;
     try {
-      const liveMeetings = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "meeting");
+      const liveMeetings = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "meeting", force);
       setMeetings(liveMeetings);
       setUsingLiveData(prev => ({ ...prev, pipedrive: true }));
     } catch (err: any) {
@@ -137,27 +137,27 @@ export function useDashboardData(filters: DashboardFilters) {
       // Keep whatever we already had (cache/previous state) instead of wiping to dummy.
     }
     try {
-      const liveEmails = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email");
+      const liveEmails = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "email", force);
       setEmails(liveEmails);
     } catch (err) { console.warn("Pipedrive emails fetch failed:", err); /* keep prev */ }
     try {
-      const liveLinkedins = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin");
+      const liveLinkedins = await fetchPipedriveActivities(filters.startDate, filters.endDate, pdUserId, "linkedin", force);
       setLinkedins(liveLinkedins);
     } catch (err) { console.warn("Pipedrive linkedin fetch failed:", err); /* keep prev */ }
 
     const sameAsFilter = filters.startDate === monthRange.start && filters.endDate === monthRange.end;
     if (!sameAsFilter) {
       try {
-        const m = await fetchPipedriveActivities(monthRange.start, monthRange.end, pdUserId, "meeting");
+        const m = await fetchPipedriveActivities(monthRange.start, monthRange.end, pdUserId, "meeting", force);
         setMonthMeetings(m);
       } catch (e) { console.warn("month meetings fetch failed", e); }
     }
   }, [filters.startDate, filters.endDate, selectedPipedriveUser, monthRange.start, monthRange.end]);
 
-  // Manual refresh = both
+  // Manual refresh = both, and bypass the Pipedrive cache
   const loadData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadCalls(), loadPipedrive()]);
+    await Promise.all([loadCalls(), loadPipedrive(true)]);
     setLoading(false);
   }, [loadCalls, loadPipedrive]);
 
